@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	dh_install
+	# Install weather.ini.default as weather.ini
+	install -d debian/saytime-weather-rb/usr/share/saytime-weather-rb
+	install -m 644 weather.ini.default debian/saytime-weather-rb/usr/share/saytime-weather-rb/weather.ini
+	# Install scripts to /usr/sbin (requires root/sudo)
+	install -d debian/saytime-weather-rb/usr/sbin
+	install -m 755 debian/saytime-weather-rb/usr/share/saytime-weather-rb/weather.rb \
+		debian/saytime-weather-rb/usr/sbin/weather.rb
+	install -m 755 debian/saytime-weather-rb/usr/share/saytime-weather-rb/saytime.rb \
+		debian/saytime-weather-rb/usr/sbin/saytime.rb
+	# Install sound files
+	install -d debian/saytime-weather-rb/usr/share/asterisk/sounds/en
+	install -d debian/saytime-weather-rb/usr/share/asterisk/sounds/en/wx
+	# Install time sounds (a-m.ulaw, p-m.ulaw) to /usr/share/asterisk/sounds/en/
+	install -m 644 sounds/a-m.ulaw debian/saytime-weather-rb/usr/share/asterisk/sounds/en/
+	install -m 644 sounds/p-m.ulaw debian/saytime-weather-rb/usr/share/asterisk/sounds/en/
+	# Install weather sounds to /usr/share/asterisk/sounds/en/wx/
+	for sound in sounds/*.ulaw; do \
+		if [ "$$sound" != "sounds/a-m.ulaw" ] && [ "$$sound" != "sounds/p-m.ulaw" ]; then \
+			install -m 644 "$$sound" debian/saytime-weather-rb/usr/share/asterisk/sounds/en/wx/; \
+		fi \
+	done
+
+override_dh_auto_build:
+	# No build step needed - Ruby scripts are interpreted
+

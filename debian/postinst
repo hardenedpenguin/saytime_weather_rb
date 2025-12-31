@@ -1,0 +1,43 @@
+#!/bin/sh
+set -e
+
+# postinst script for saytime-weather-rb
+
+if [ "$1" = "configure" ]; then
+    # Create config directory if it doesn't exist
+    if [ ! -d /etc/asterisk/local ]; then
+        mkdir -p /etc/asterisk/local
+        chown asterisk:asterisk /etc/asterisk/local
+        chmod 755 /etc/asterisk/local
+    fi
+    
+    # Install default config only if it doesn't exist
+    CONFIG_FILE="/etc/asterisk/local/weather.ini"
+    if [ ! -f "$CONFIG_FILE" ]; then
+        if [ -f /usr/share/saytime-weather-rb/weather.ini ]; then
+            install -m 644 /usr/share/saytime-weather-rb/weather.ini "$CONFIG_FILE"
+            chown asterisk:asterisk "$CONFIG_FILE"
+            echo "Installed default configuration file: $CONFIG_FILE"
+        fi
+    fi
+    
+    # Set ownership for all installed files
+    if [ -d /usr/sbin ]; then
+        chown asterisk:asterisk /usr/sbin/weather.rb /usr/sbin/saytime.rb 2>/dev/null || true
+    fi
+    
+    if [ -d /usr/share/asterisk/sounds/en ]; then
+        chown -R asterisk:asterisk /usr/share/asterisk/sounds/en/wx 2>/dev/null || true
+        chown asterisk:asterisk /usr/share/asterisk/sounds/en/a-m.ulaw /usr/share/asterisk/sounds/en/p-m.ulaw 2>/dev/null || true
+    fi
+    
+    echo "saytime-weather-rb installed successfully."
+    echo "Configuration file: $CONFIG_FILE"
+    echo ""
+    echo "Usage:"
+    echo "  /usr/sbin/weather.rb <location> [v]"
+    echo "  /usr/sbin/saytime.rb -l <location> -n <node_number>"
+fi
+
+#DEBHELPER#
+

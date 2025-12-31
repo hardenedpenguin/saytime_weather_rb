@@ -1,0 +1,54 @@
+; ============================================================================
+; Weather Configuration for saytime-weather-rb
+; ============================================================================
+; This file controls how weather data is fetched and announced.
+; All settings have sensible defaults - no changes required to get started!
+; Command-line options override settings in this file for that run only.
+; ============================================================================
+
+[weather]
+
+; ============================================================================
+; TEMPERATURE SETTINGS
+; ============================================================================
+
+; Temperature display mode: F for Fahrenheit, C for Celsius
+; Affects both temperature file output and displayed text.
+; Valid values: F, C
+; Default: F
+Temperature_mode = F
+
+; ============================================================================
+; CONDITION ANNOUNCEMENTS
+; ============================================================================
+
+; Process and announce weather conditions (cloudy, rain, clear, etc.)
+; Set to NO to only announce temperature (no condition sound files).
+; Valid values: YES, NO
+; Default: YES
+process_condition = YES
+
+; ============================================================================
+; LOCATION SETTINGS
+; ============================================================================
+
+; Default country for ambiguous postal code lookups
+; Helps with 5-digit codes that could be multiple countries (US, Germany, etc.)
+; Use ISO 3166-1 alpha-2 country codes: us, ca, de, fr, uk, jp, au, etc.
+; Leave blank for international search (slower, but more flexible).
+; Valid values: ISO country code or blank
+; Default: us
+default_country = us
+
+; ============================================================================
+; WEATHER DATA SOURCE
+; ============================================================================
+
+; Weather data provider
+;   openmeteo: Free, no API key, worldwide coverage (default)
+;   nws:       Free, no API key, US locations only (official government data)
+;              Automatically falls back to openmeteo for non-US locations
+; Valid values: openmeteo, nws
+; Default: openmeteo
+weather_provider = openmeteo
+

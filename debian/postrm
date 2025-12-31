@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+# postrm script for saytime-weather-rb
+
+if [ "$1" = "purge" ]; then
+    :
+fi
+
+#DEBHELPER#
+

@@ -1,0 +1,30 @@
+# Debian build artifacts
+debian/saytime-weather-rb/
+debian/.debhelper/
+debian/files
+debian/substvars
+debian/*.debhelper.log
+debian/*.substvars
+*.deb
+*.dsc
+*.tar.gz
+*.buildinfo
+*.changes
+
+# Ruby
+*.gem
+*.rbc
+.bundle/
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+

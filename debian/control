@@ -1,0 +1,24 @@
+Source: saytime-weather-rb
+Section: hamradio
+Priority: optional
+Maintainer: Jory A. Pratt <geekypenguin@gmail.com>
+Build-Depends: debhelper-compat (= 13), ruby (>= 2.7.0)
+Standards-Version: 4.6.0
+Homepage: https://github.com/hardenedpenguin/saytime_weather_rb
+Rules-Requires-Root: no
+
+Package: saytime-weather-rb
+Architecture: all
+Depends: ${misc:Depends}, ruby (>= 2.7.0), asl3-asterisk
+Description: Time and weather announcement system for Asterisk
+ A time and weather announcement system for Asterisk PBX, designed for radio
+ systems, repeater controllers, and amateur radio applications.
+ .
+ Features:
+  * Time announcements in 12-hour or 24-hour formats
+  * Worldwide weather via postal codes, ICAO airport codes, or special locations
+  * No API keys required - uses free weather APIs
+  * Location-aware timezone support
+ .
+ Zero external dependencies - uses only Ruby standard library.
+

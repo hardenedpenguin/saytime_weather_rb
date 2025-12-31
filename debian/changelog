@@ -1,0 +1,28 @@
+saytime-weather-rb (0.0.1-1) unstable; urgency=medium
+
+  * Initial Debian package release
+  * Ruby implementation of time and weather announcement system for Asterisk PBX
+  * Complete rewrite in Ruby with zero external dependencies
+  * Uses only Ruby standard library - no gem dependencies required
+  * Supports Open-Meteo (worldwide) and NWS (US) weather providers
+  * Features:
+    - Time announcements in 12-hour or 24-hour formats
+    - Current weather conditions and temperature via postal codes, ICAO airport codes, or special locations
+    - 60+ special locations including Antarctica stations, Arctic locations, DXpedition islands, and remote weather stations
+    - No API keys required - uses free weather APIs
+    - Location-aware timezone support using system timezone database (no tzinfo gem needed)
+    - Real-time weather data from current observations (not forecasts)
+    - Temperature displayed as whole numbers (rounded)
+    - Improved weather condition matching for accurate sound file selection
+    - NWS API support with proper coordinate precision and redirect handling
+    - Simplified configuration (single config path: /etc/asterisk/local/weather.ini)
+    - Resolved option conflicts between weather.rb and saytime.rb scripts
+    - Code optimizations reducing total line count by ~6.4%
+  * Installation:
+    - Scripts installed to /usr/sbin (requires root/sudo)
+    - All files owned by asterisk:asterisk for proper Asterisk dialplan access
+    - Default config installed only if no existing config present
+    - Sound files installed to /usr/share/asterisk/sounds/en/ and /usr/share/asterisk/sounds/en/wx/
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Mon, 30 Dec 2025 12:00:00 -0600
+
