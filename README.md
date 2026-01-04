@@ -70,7 +70,9 @@ Required: `-l, --location_id=ID`, `-n, --node_number=NUM`
 
 Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-v, --verbose`, `--dry-run`, `--no-weather`
 
-**Timezone:** The script uses the location's timezone from weather data. You can override this by setting the `TZ` environment variable (e.g., `TZ=UTC` for UTC time, `TZ=Europe/London` for London time).
+**Important:** The `-l, --location_id` option is a `saytime.rb` option (not a `weather.rb` option). When you specify `-l <location>`, `saytime.rb` automatically passes this location to `weather.rb` internally. The `-d, --default-country` option is passed through from `saytime.rb` to `weather.rb` when calling the weather script. You cannot use `-l` directly with `weather.rb` - it only accepts location as a positional argument.
+
+**Timezone:** When weather is enabled (default), the timezone is determined by `weather.rb` based on the location's weather data. When using `--no-weather`, `weather.rb` is not called and the timezone falls back to the system's local time. You can override this behavior by setting the `TZ` environment variable when running `saytime.rb` (e.g., `TZ=UTC saytime.rb -l 75001 -n 123456` for UTC time, or `TZ=Europe/London saytime.rb -l 75001 -n 123456` for London time). The `TZ` environment variable takes precedence over all other timezone sources.
 
 Run with `--help` for complete option list.
 
