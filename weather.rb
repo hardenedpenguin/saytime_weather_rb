@@ -14,7 +14,7 @@ require 'json'
 require 'optparse'
 require 'tempfile'
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 TMP_DIR = '/tmp'
 TEMP_FILE = '/tmp/temperature'
 COND_FILE = '/tmp/condition.ulaw'
@@ -282,7 +282,8 @@ class WeatherScript
           error("  For ICAO codes, ensure the airport code is valid (e.g., KJFK, EGLL)")
         end
         
-        w_type = 'openmeteo' unless w_type
+        # Only set default provider if we still don't have a type
+        w_type ||= 'openmeteo'
       end
     end
     
@@ -295,6 +296,12 @@ class WeatherScript
     
     # Convert to Celsius if needed
     temp_f = temperature.to_f
+    # Validate temperature is reasonable before conversion
+    unless temp_f >= -150.0 && temp_f <= 200.0
+      error("Invalid temperature value: #{temp_f}°F")
+      error("  Location: #{location}")
+      exit 1
+    end
     temp_c = ((5.0 / 9.0) * (temp_f - 32)).round
     
     # Round temperature to whole number for display
@@ -430,47 +437,70 @@ class WeatherScript
   def http_get(url, timeout = HTTP_TIMEOUT_SHORT, user_agent = nil, max_redirects = 5)
     return nil if max_redirects <= 0
     
-    uri = URI(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == 'https'
-    http.open_timeout = timeout
-    http.read_timeout = timeout
-    
-    request = Net::HTTP::Get.new(uri)
-    request['User-Agent'] = user_agent || 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
-    
-    response = http.request(request)
-    response_code = response.code.to_i
-    
-    case response_code
-    when 200
-      response.body
-    when 301, 302, 303, 307, 308
-      # Handle redirects
-      location = response['Location'] || response['location']
-      if location
-        # Use URI to properly resolve relative URLs
-        begin
-          redirect_uri = URI(location)
-          if redirect_uri.relative?
-            redirect_uri = uri + redirect_uri
+    begin
+      uri = URI(url)
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = uri.scheme == 'https'
+      http.open_timeout = timeout
+      http.read_timeout = timeout
+      
+      request = Net::HTTP::Get.new(uri)
+      request['User-Agent'] = user_agent || 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
+      
+      response = http.request(request)
+      response_code = response.code.to_i
+      
+      case response_code
+      when 200
+        response.body
+      when 301, 302, 303, 307, 308
+        # Handle redirects
+        location = response['Location'] || response['location']
+        if location
+          # Use URI to properly resolve relative URLs
+          begin
+            redirect_uri = URI(location)
+            if redirect_uri.relative?
+              redirect_uri = uri + redirect_uri
+            end
+            redirect_url = redirect_uri.to_s
+            return http_get(redirect_url, timeout, user_agent, max_redirects - 1)
+          rescue => e
+            warn("Failed to follow redirect: #{e.message}") if @options[:verbose]
           end
-          redirect_url = redirect_uri.to_s
-          return http_get(redirect_url, timeout, user_agent, max_redirects - 1)
-        rescue => e
         end
+        nil
+      when 429
+        # Rate limited
+        warn("Rate limited by server, please wait before retrying") if @options[:verbose]
+        nil
+      when 404
+        # Not found
+        nil
+      else
+        warn("HTTP error #{response_code} from #{uri.host}") if @options[:verbose]
+        nil
       end
+    rescue URI::InvalidURIError => e
+      warn("Invalid URL: #{url}") if @options[:verbose]
       nil
-    else
+    rescue Net::TimeoutError => e
+      warn("Request timeout for #{url}") if @options[:verbose]
+      nil
+    rescue => e
+      warn("HTTP request failed: #{e.message}") if @options[:verbose]
       nil
     end
-  rescue => e
-    nil
   end
 
   def safe_decode_json(content)
+    return nil unless content && !content.empty?
     JSON.parse(content)
+  rescue JSON::ParserError => e
+    warn("JSON parse error: #{e.message}") if @options[:verbose]
+    nil
   rescue => e
+    warn("Unexpected error parsing JSON: #{e.message}") if @options[:verbose]
     nil
   end
 
@@ -619,6 +649,9 @@ class WeatherScript
     end
     
     # Use Nominatim for regular postal codes
+    # Respect Nominatim rate limits (1 request per second recommended)
+    sleep(NOMINATIM_DELAY) if NOMINATIM_DELAY > 0
+    
     country = ''
     url = nil
     
@@ -633,7 +666,6 @@ class WeatherScript
       url = "https://nominatim.openstreetmap.org/search?postalcode=#{URI.encode_www_form_component(postal)}&format=json&limit=1"
     end
     
-    
     response = http_get(url, HTTP_TIMEOUT_SHORT)
     return nil unless response
     
@@ -642,13 +674,16 @@ class WeatherScript
     
     lat = data[0]['lat'].to_f
     lon = data[0]['lon'].to_f
-    display = data[0]['display_name'] || postal
     
+    # Validate coordinate ranges
+    return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
     
     [lat, lon]
   end
 
   def fetch_weather_openmeteo(lat, lon)
+    # Validate coordinates
+    return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
     
     url = "https://api.open-meteo.com/v1/forecast?" +
           "latitude=#{lat}&longitude=#{lon}&" +
@@ -664,6 +699,10 @@ class WeatherScript
     temp = data['current']['temperature_2m']
     code = data['current']['weather_code']
     is_day = data['current']['is_day'] || 1
+    
+    # Validate temperature is numeric
+    return nil unless temp.is_a?(Numeric)
+    
     condition = weather_code_to_text(code, is_day)
     timezone = data['timezone'] || ''
     
@@ -719,7 +758,10 @@ class WeatherScript
   end
 
   def fetch_weather_nws(lat, lon)
-    # Rough US bounds check
+    # Validate coordinates are within valid ranges
+    return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+    
+    # Rough US bounds check (NWS only supports US locations)
     if lat < 18.0 || lat > 72.0 || lon < -180.0 || lon > -50.0
       return nil
     end
@@ -764,7 +806,7 @@ class WeatherScript
             
             # Temperature is in Celsius, convert to Fahrenheit (use current observation)
             temp_c = obs_data['properties']['temperature'] && obs_data['properties']['temperature']['value']
-            if temp_c
+            if temp_c && temp_c.is_a?(Numeric)
               temp = (temp_c * 9.0 / 5.0) + 32.0
             end
             
@@ -809,7 +851,11 @@ class WeatherScript
               # Use first period as fallback only
               current = periods[0]
               if current
-                temp = current['temperature'] if !temp
+                # Validate temperature is numeric before using
+                forecast_temp = current['temperature']
+                if !temp && forecast_temp && forecast_temp.is_a?(Numeric)
+                  temp = forecast_temp
+                end
                 condition_text = current['shortForecast'] || current['detailedForecast'] || ''
                 if condition_text && !condition_text.empty? && !condition
                   condition = parse_nws_condition(condition_text)

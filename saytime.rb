@@ -12,7 +12,7 @@ require 'optparse'
 require 'fileutils'
 require 'time'
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 TMP_DIR = '/tmp'
 BASE_SOUND_DIR = '/usr/share/asterisk/sounds/en'
 WEATHER_SCRIPT = File.join(File.dirname(__FILE__), 'weather.rb')
@@ -268,18 +268,29 @@ class SaytimeScript
     # Use timezone if we have one
     if timezone && !timezone.empty?
       begin
-        # Use system's date command to get hour and minute in specified timezone
-        time_parts = `TZ='#{timezone}' date +"%H %M %S"`.strip
-        if $?.success? && !time_parts.empty?
-          parts = time_parts.split.map(&:to_i)
-          if parts.length >= 2
-            hour, minute, second = parts[0], parts[1], (parts[2] || 0)
-            # Get current date (we only care about time for announcements)
-            now = Time.now
-            # Create a Time object with the timezone-specific hour and minute
-            # Note: This creates a local time object, but with the correct hour/minute
-            time = Time.new(now.year, now.month, now.day, hour, minute, second)
-            return time
+        # Sanitize timezone to prevent shell injection (only allow alphanumeric, /, _, -, +, :)
+        sanitized_tz = timezone.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
+        if sanitized_tz.empty? || sanitized_tz != timezone
+          # Invalid timezone format, fall through to system local time
+        else
+          # Use system's date command to get hour and minute in specified timezone
+          # Use environment variable instead of shell interpolation for safety
+          time_parts = nil
+          IO.popen({ 'TZ' => sanitized_tz }, ['date', '+%H %M %S']) do |io|
+            time_parts = io.read.strip
+          end
+          
+          if $?.success? && time_parts && !time_parts.empty?
+            parts = time_parts.split.map(&:to_i)
+            if parts.length >= 2
+              hour, minute, second = parts[0], parts[1], (parts[2] || 0)
+              # Get current date (we only care about time for announcements)
+              now = Time.now
+              # Create a Time object with the timezone-specific hour and minute
+              # Note: This creates a local time object, but with the correct hour/minute
+              time = Time.new(now.year, now.month, now.day, hour, minute, second)
+              return time
+            end
           end
         end
       rescue => e
