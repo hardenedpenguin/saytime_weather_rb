@@ -1,3 +1,31 @@
+saytime-weather-rb (0.0.3-1) unstable; urgency=medium
+
+  * saytime.rb: Fix custom sound directory path validation
+    - Fixed is_safe_path() to properly validate custom sound directories
+    - Custom sound directories via --sound-dir option now work correctly
+  * saytime.rb: Improve playback method option
+    - Changed -m/--method to accept explicit method value (localplay or playback)
+    - Improved option help text for clarity
+  * saytime.rb: Improve timezone sanitization logic
+    - Enhanced timezone validation to properly handle timezones with spaces
+    - Better error handling and fallback logic
+  * weather.rb: Add safe hash access for coordinate extraction
+    - Added validation before accessing JSON response coordinates
+    - Prevents potential errors from unexpected API response structures
+  * weather.rb: Use buffered file reading for condition sound files
+    - Changed to buffered reading using HTTP_BUFFER_SIZE constant
+    - More memory efficient for large sound files
+    - Consistent with saytime.rb implementation
+  * weather.rb: Extract duplicate timezone file writing code
+    - Created write_timezone_file() helper method
+    - Eliminates code duplication between fetch methods
+  * weather.rb: Code cleanup and documentation
+    - Removed trailing empty line in create_default_config()
+    - Added clarifying comments for fallthrough logic
+    - Improved code maintainability
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Mon, 19 Jan 2026 10:09:41 -0600
+
 saytime-weather-rb (0.0.2-1) unstable; urgency=medium
 
   * Fix multi-word weather condition handling in weather.rb
