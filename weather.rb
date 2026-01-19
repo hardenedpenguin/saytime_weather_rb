@@ -14,7 +14,7 @@ require 'json'
 require 'optparse'
 require 'tempfile'
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 TMP_DIR = '/tmp'
 TEMP_FILE = '/tmp/temperature'
 COND_FILE = '/tmp/condition.ulaw'
@@ -159,7 +159,6 @@ class WeatherScript
   end
 
   def create_default_config(config_path)
-    
     FileUtils.mkdir_p(File.dirname(config_path)) unless Dir.exist?(File.dirname(config_path))
     File.write(config_path, "[weather]\nTemperature_mode = F\nprocess_condition = YES\ndefault_country = us\nweather_provider = openmeteo\n")
     File.chmod(0o644, config_path)
@@ -217,9 +216,7 @@ class WeatherScript
           temperature = metar_temp.round.to_s
           condition = metar_cond
           w_type = 'metar'
-          
-          
-        else
+        # else: METAR fetch failed, fall through to postal code lookup
         end
       end
       
@@ -401,7 +398,13 @@ class WeatherScript
     if condition_files.any?
       File.open(COND_FILE, 'wb') do |out|
         condition_files.each do |file|
-          File.open(file, 'rb') { |in_file| out.write(in_file.read) } if File.exist?(file)
+          if File.exist?(file)
+            File.open(file, 'rb') do |in_file|
+              while chunk = in_file.read(HTTP_BUFFER_SIZE)
+                out.write(chunk)
+              end
+            end
+          end
         end
       end
     else
@@ -672,8 +675,12 @@ class WeatherScript
     data = safe_decode_json(response)
     return nil unless data.is_a?(Array) && data.any?
     
-    lat = data[0]['lat'].to_f
-    lon = data[0]['lon'].to_f
+    # Safely extract coordinates with validation
+    first_result = data[0]
+    return nil unless first_result.is_a?(Hash) && first_result['lat'] && first_result['lon']
+    
+    lat = first_result['lat'].to_f
+    lon = first_result['lon'].to_f
     
     # Validate coordinate ranges
     return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
@@ -706,19 +713,22 @@ class WeatherScript
     condition = weather_code_to_text(code, is_day)
     timezone = data['timezone'] || ''
     
-    if timezone && !timezone.empty?
-      begin
-        File.write(TIMEZONE_FILE, timezone)
-      rescue => e
-        warn("Failed to write timezone file: #{e.message}")
-      end
-    end
+    write_timezone_file(timezone)
     
     [temp, condition, timezone]
   end
 
+  def write_timezone_file(timezone)
+    return unless timezone && !timezone.empty?
+    
+    begin
+      File.write(TIMEZONE_FILE, timezone)
+    rescue => e
+      warn("Failed to write timezone file: #{e.message}")
+    end
+  end
+
   def weather_code_to_text(code, is_day = 1)
-    is_day = 1 unless is_day
     
     return 'Sunny' if code == 1 && is_day == 1
     return 'Mainly Clear' if code == 1 && is_day == 0
@@ -869,13 +879,7 @@ class WeatherScript
     
     return nil unless temp && condition
     
-    if timezone && !timezone.empty?
-      begin
-        File.write(TIMEZONE_FILE, timezone)
-      rescue => e
-        warn("Failed to write timezone file: #{e.message}")
-      end
-    end
+    write_timezone_file(timezone)
     
     [temp, condition, timezone]
   end

@@ -12,7 +12,7 @@ require 'optparse'
 require 'fileutils'
 require 'time'
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 TMP_DIR = '/tmp'
 BASE_SOUND_DIR = '/usr/share/asterisk/sounds/en'
 WEATHER_SCRIPT = File.join(File.dirname(__FILE__), 'weather.rb')
@@ -109,8 +109,8 @@ class SaytimeScript
         @options[:greeting_enabled] = false
       end
       
-      opts.on('-m', '--method', 'Enable playback method (default: localplay)') do
-        @options[:play_method] = 'playback'
+      opts.on('-m', '--method=METHOD', 'Playback method: localplay or playback (default: localplay)') do |method|
+        @options[:play_method] = method.downcase
       end
       
       opts.on('--sound-dir=DIR', 'Use custom sound directory') do |dir|
@@ -146,7 +146,7 @@ class SaytimeScript
     puts "      --no-weather        Disable weather announcements"
     puts "  -g, --greeting          Enable greeting messages (default: on)"
     puts "      --no-greeting       Disable greeting messages"
-    puts "  -m, --method            Enable playback mode (default: localplay)"
+      puts "  -m, --method=METHOD     Playback method: localplay or playback (default: localplay)"
     puts "      --sound-dir=DIR     Use custom sound directory"
     puts "                          (default: /usr/share/asterisk/sounds/en)"
     puts "      --log=FILE          Log to specified file (default: none)"
@@ -268,10 +268,12 @@ class SaytimeScript
     # Use timezone if we have one
     if timezone && !timezone.empty?
       begin
-        # Sanitize timezone to prevent shell injection (only allow alphanumeric, /, _, -, +, :)
+        # Sanitize timezone to prevent shell injection (only allow alphanumeric, /, _, -, +, :, and spaces)
         sanitized_tz = timezone.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
-        if sanitized_tz.empty? || sanitized_tz != timezone
+        if sanitized_tz.empty?
           # Invalid timezone format, fall through to system local time
+        elsif sanitized_tz != timezone
+          # Contains invalid characters, fall through to system local time
         else
           # Use system's date command to get hour and minute in specified timezone
           # Use environment variable instead of shell interpolation for safety
@@ -570,6 +572,10 @@ class SaytimeScript
     return false if file.include?('..')
     return true if file.start_with?('/usr/share/asterisk/sounds')
     return true if file.start_with?('/tmp/')
+    # Allow custom sound directories (validated to exist in validate_options)
+    if @options[:custom_sound_dir] && file.start_with?(@options[:custom_sound_dir])
+      return true
+    end
     false
   end
 
