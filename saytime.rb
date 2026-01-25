@@ -12,7 +12,7 @@ require 'optparse'
 require 'fileutils'
 require 'time'
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 TMP_DIR = '/tmp'
 BASE_SOUND_DIR = '/usr/share/asterisk/sounds/en'
 WEATHER_SCRIPT = File.join(File.dirname(__FILE__), 'weather.rb')

@@ -5,7 +5,7 @@
 # Copyright 2026 Jory A. Pratt, W5GLE
 #
 # - Fetches weather from Open-Meteo or NWS APIs (free, no API keys)
-# - Supports postal codes, ICAO airport codes, and special locations
+# - Supports postal codes, IATA airport codes, ICAO airport codes, and special locations
 # - Creates sound files for temperature and conditions
 
 require 'net/http'
@@ -14,7 +14,7 @@ require 'json'
 require 'optparse'
 require 'tempfile'
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 TMP_DIR = '/tmp'
 TEMP_FILE = '/tmp/temperature'
 COND_FILE = '/tmp/condition.ulaw'
@@ -87,7 +87,8 @@ class WeatherScript
     puts "weather.rb version #{VERSION}\n\n"
     puts "Usage: #{File.basename($PROGRAM_NAME)} [OPTIONS] location_id [v]\n\n"
     puts "Arguments:"
-    puts "  location_id    Postal code, ZIP code, or ICAO airport code"
+    puts "  location_id    Postal code, ZIP code, IATA airport code, or ICAO airport code"
+    puts "                 IATA examples: JFK, LHR, CDG, DFW, SYD, NRT"
     puts "                 ICAO examples: KJFK, EGLL, CYYZ, NZSP, LFPG, RJAA"
     puts "  v              Optional: Display text only (verbose mode), no sound output\n\n"
     puts "Options:"
@@ -104,7 +105,11 @@ class WeatherScript
     puts "    #{File.basename($PROGRAM_NAME)} M5H2N2 v                 # Toronto, ON (postal code)"
     puts "    #{File.basename($PROGRAM_NAME)} -d fr 75001              # Paris, France"
     puts "    #{File.basename($PROGRAM_NAME)} -d de 10115 v            # Berlin, Germany\n\n"
-    puts "  ICAO Airport Codes:"
+    puts "  IATA Airport Codes (3 letters):"
+    puts "    #{File.basename($PROGRAM_NAME)} JFK v                    # JFK Airport, New York"
+    puts "    #{File.basename($PROGRAM_NAME)} LHR                      # Heathrow, London"
+    puts "    #{File.basename($PROGRAM_NAME)} DFW v                    # Dallas/Fort Worth\n\n"
+    puts "  ICAO Airport Codes (4 letters):"
     puts "    #{File.basename($PROGRAM_NAME)} KJFK v                   # JFK Airport, New York"
     puts "    #{File.basename($PROGRAM_NAME)} EGLL                     # Heathrow, London"
     puts "    #{File.basename($PROGRAM_NAME)} CYYZ v                   # Toronto Pearson\n\n"
@@ -114,7 +119,13 @@ class WeatherScript
     puts "  - Temperature_mode: F/C (set to C for Celsius, F for Fahrenheit)"
     puts "  - process_condition: YES/NO (default: YES)"
     puts "  - default_country: ISO country code for postal lookups (default: us)"
-    puts "  - weather_provider: openmeteo (worldwide) or nws (US only, default: openmeteo)\n\n"
+    puts "  - weather_provider: openmeteo (worldwide) or nws (US only, default: openmeteo)"
+    puts "  - show_precipitation: YES/NO (default: NO) - Units: inches (F) or mm (C)"
+    puts "  - show_wind: YES/NO (default: NO) - Units: mph (F) or km/h (C)"
+    puts "  - show_pressure: YES/NO (default: NO) - Units: inHG (F) or hPa (C)"
+    puts "  - show_humidity: YES/NO (default: NO) - Shows relative humidity percentage"
+    puts "  - show_zero_precip: YES/NO (default: NO) - Show precipitation even when zero"
+    puts "  - precip_trace_mm: decimal (default: 0.10) - Minimum mm to show precipitation\n\n"
     puts "Note: Command line options override configuration file settings for that run.\n"
   end
 
@@ -149,6 +160,12 @@ class WeatherScript
     @config['Temperature_mode'] ||= 'F'
     @config['default_country'] ||= 'us'
     @config['weather_provider'] ||= 'openmeteo'
+    @config['show_precipitation'] ||= 'NO'
+    @config['show_wind'] ||= 'NO'
+    @config['show_pressure'] ||= 'NO'
+    @config['show_humidity'] ||= 'NO'
+    @config['show_zero_precip'] ||= 'NO'
+    @config['precip_trace_mm'] ||= '0.10'
     
     # Apply command line overrides
     @config['default_country'] = @options[:default_country] if @options[:default_country]
@@ -160,7 +177,20 @@ class WeatherScript
 
   def create_default_config(config_path)
     FileUtils.mkdir_p(File.dirname(config_path)) unless Dir.exist?(File.dirname(config_path))
-    File.write(config_path, "[weather]\nTemperature_mode = F\nprocess_condition = YES\ndefault_country = us\nweather_provider = openmeteo\n")
+    default_config = <<~CONFIG
+      [weather]
+      Temperature_mode = F
+      process_condition = YES
+      default_country = us
+      weather_provider = openmeteo
+      show_precipitation = NO
+      show_wind = NO
+      show_pressure = NO
+      show_humidity = NO
+      show_zero_precip = NO
+      precip_trace_mm = 0.10
+    CONFIG
+    File.write(config_path, default_config)
     File.chmod(0o644, config_path)
   end
 
@@ -204,18 +234,32 @@ class WeatherScript
     condition = nil
     w_type = nil
     timezone = nil
+    @weather_data = {}  # Store additional weather data
     unless temperature && condition
       lat = nil
       lon = nil
       
-      # Try ICAO/METAR first
-      if icao_code?(location)
+      # Try IATA codes first (convert to ICAO and fetch METAR)
+      if iata_code?(location)
+        icao = iata_to_icao(location)
+        metar_temp, metar_cond = fetch_metar_weather(icao)
+        
+        if metar_temp && metar_cond
+          temperature = metar_temp.round.to_s
+          condition = metar_cond
+          w_type = 'metar'
+          @weather_data = { temp: metar_temp, condition: metar_cond }  # METAR doesn't provide additional data
+        # else: METAR fetch failed, fall through to postal code lookup
+        end
+      # Try ICAO/METAR if not IATA
+      elsif icao_code?(location)
         metar_temp, metar_cond = fetch_metar_weather(location)
         
         if metar_temp && metar_cond
           temperature = metar_temp.round.to_s
           condition = metar_cond
           w_type = 'metar'
+          @weather_data = { temp: metar_temp, condition: metar_cond }  # METAR doesn't provide additional data
         # else: METAR fetch failed, fall through to postal code lookup
         end
       end
@@ -232,35 +276,37 @@ class WeatherScript
           
           # Auto-detect US locations and prefer NWS if provider not explicitly set in config
           is_us_location = (lat >= 18.0 && lat <= 72.0 && lon >= -180.0 && lon <= -50.0)
+          weather_data = nil
           if !@provider_explicitly_set && is_us_location
             # Provider not explicitly set and this is a US location - try NWS first (matches Perl behavior)
-            temp, cond, tz = fetch_weather_nws(lat, lon)
-            if temp && cond
+            weather_data = fetch_weather_nws(lat, lon)
+            if weather_data && weather_data[:temp] && weather_data[:condition]
               provider = 'nws'
               w_type = 'nws'
             else
-              temp, cond, tz = fetch_weather_openmeteo(lat, lon)
+              weather_data = fetch_weather_openmeteo(lat, lon)
               provider = 'openmeteo'
             end
           elsif provider == 'nws'
-            temp, cond, tz = fetch_weather_nws(lat, lon)
+            weather_data = fetch_weather_nws(lat, lon)
             
-            unless temp && cond
-              temp, cond, tz = fetch_weather_openmeteo(lat, lon)
+            unless weather_data && weather_data[:temp] && weather_data[:condition]
+              weather_data = fetch_weather_openmeteo(lat, lon)
               provider = 'openmeteo'
             else
               w_type = 'nws'
             end
           else
-            temp, cond, tz = fetch_weather_openmeteo(lat, lon)
+            weather_data = fetch_weather_openmeteo(lat, lon)
             provider = 'openmeteo'
           end
           
-          if temp && cond
+          if weather_data && weather_data[:temp] && weather_data[:condition]
             # Don't round temperature here - keep as float for display, round only for file output
-            temperature = temp.to_s
-            condition = cond
-            timezone = tz
+            temperature = weather_data[:temp].to_s
+            condition = weather_data[:condition]
+            timezone = weather_data[:timezone]
+            @weather_data = weather_data  # Store for display
             w_type = provider unless w_type
             
           else
@@ -276,7 +322,8 @@ class WeatherScript
         else
           error("Could not get coordinates for location: #{location}")
           error("  Hint: Verify the postal code or location name is correct")
-          error("  For ICAO codes, ensure the airport code is valid (e.g., KJFK, EGLL)")
+          error("  For IATA codes (3 letters), ensure the airport code is valid (e.g., JFK, LHR, DFW)")
+          error("  For ICAO codes (4 letters), ensure the airport code is valid (e.g., KJFK, EGLL)")
         end
         
         # Only set default provider if we still don't have a type
@@ -303,7 +350,103 @@ class WeatherScript
     
     # Round temperature to whole number for display
     temp_f_display = temp_f.round
-    puts "#{temp_f_display}°F, #{temp_c}°C / #{condition}"
+    
+    # Build output string
+    output_parts = ["#{temp_f_display}°F, #{temp_c}°C"]
+    
+    # Humidity (shown early, before condition)
+    if @config['show_humidity'] == 'YES' && weather_data[:humidity]
+      humidity_val = weather_data[:humidity]
+      if humidity_val && humidity_val.is_a?(Numeric)
+        output_parts << "#{humidity_val.round}% RH"
+      end
+    end
+    
+    output_parts << condition
+    
+    # Add additional data based on config and F/C mode
+    temp_mode = @config['Temperature_mode']
+    weather_data = @weather_data || {}
+    
+    # Precipitation
+    if @config['show_precipitation'] == 'YES' && weather_data[:precipitation]
+      precip_mm = weather_data[:precipitation]
+      if precip_mm && precip_mm.is_a?(Numeric)
+        # Check if we should show zero precipitation
+        show_precip = false
+        if precip_mm > 0
+          show_precip = true
+        elsif @config['show_zero_precip'] == 'YES'
+          show_precip = true
+        end
+        
+        # Check trace threshold
+        if show_precip && precip_mm > 0
+          trace_threshold = @config['precip_trace_mm'].to_f
+          if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
+            show_precip = false
+          end
+        end
+        
+        if show_precip
+          if temp_mode == 'F'
+            precip_in = mm_to_inches(precip_mm)
+            output_parts << "Precip #{precip_in} in" if precip_in
+          else
+            output_parts << "Precip #{precip_mm.round(2)} mm"
+          end
+        end
+      end
+    end
+    
+    # Wind
+    if @config['show_wind'] == 'YES' && weather_data[:wind_speed]
+      wind_ms = weather_data[:wind_speed]
+      if wind_ms && wind_ms.is_a?(Numeric) && wind_ms > 0
+        wind_str = "Wind"
+        if temp_mode == 'F'
+          wind_mph = ms_to_mph(wind_ms)
+          wind_str += " #{wind_mph} mph" if wind_mph
+        else
+          wind_kmh = ms_to_kmh(wind_ms)
+          wind_str += " #{wind_kmh} km/h" if wind_kmh
+        end
+        
+        # Add direction if available
+        if weather_data[:wind_direction] && weather_data[:wind_direction].is_a?(Numeric)
+          dir = wind_direction_to_cardinal(weather_data[:wind_direction])
+          wind_str += " #{dir}" if dir
+        end
+        
+        # Add gusts if available
+        if weather_data[:wind_gusts] && weather_data[:wind_gusts].is_a?(Numeric) && weather_data[:wind_gusts] > wind_ms
+          if temp_mode == 'F'
+            gust_mph = ms_to_mph(weather_data[:wind_gusts])
+            wind_str += " (gust #{gust_mph})" if gust_mph
+          else
+            gust_kmh = ms_to_kmh(weather_data[:wind_gusts])
+            wind_str += " (gust #{gust_kmh})" if gust_kmh
+          end
+        end
+        
+        output_parts << wind_str
+      end
+    end
+    
+    # Pressure
+    if @config['show_pressure'] == 'YES' && weather_data[:pressure]
+      pressure_hpa = weather_data[:pressure]
+      if pressure_hpa && pressure_hpa.is_a?(Numeric)
+        if temp_mode == 'F'
+          pressure_inhg = hpa_to_inhg(pressure_hpa)
+          output_parts << "#{pressure_inhg} inHG" if pressure_inhg
+        else
+          output_parts << "#{pressure_hpa.round} hPa"
+        end
+      end
+    end
+    
+    puts output_parts.join(' / ')
     
     # Exit if display only
     exit 0 if display_only == 'v'
@@ -507,6 +650,116 @@ class WeatherScript
     nil
   end
 
+  def iata_code?(code)
+    return false unless code =~ /^[A-Z]{3}$/i
+    # IATA codes are 3 uppercase letters
+    true
+  end
+
+  def iata_to_icao(iata)
+    iata = iata.upcase
+    
+    # US airports: ICAO is typically K + IATA
+    # Try this first for US airports
+    us_icao = "K#{iata}"
+    
+    # International IATA to ICAO mapping for common airports
+    # This covers major international airports that don't follow the K+IATA pattern
+    iata_to_icao_map = {
+      # Major European airports
+      'LHR' => 'EGLL',  # London Heathrow
+      'LGW' => 'EGKK',  # London Gatwick
+      'CDG' => 'LFPG',  # Paris Charles de Gaulle
+      'ORY' => 'LFPO',  # Paris Orly
+      'FRA' => 'EDDF',  # Frankfurt
+      'MUC' => 'EDDM',  # Munich
+      'AMS' => 'EHAM',  # Amsterdam
+      'BRU' => 'EBBR',  # Brussels
+      'ZUR' => 'LSZH',  # Zurich
+      'VIE' => 'LOWW',  # Vienna
+      'MAD' => 'LEMD',  # Madrid
+      'BCN' => 'LEBL',  # Barcelona
+      'FCO' => 'LIRF',  # Rome Fiumicino
+      'MXP' => 'LIMC',  # Milan Malpensa
+      'ATH' => 'LGAV',  # Athens
+      'DUB' => 'EIDW',  # Dublin
+      'CPH' => 'EKCH',  # Copenhagen
+      'ARN' => 'ESSA',  # Stockholm
+      'OSL' => 'ENGM',  # Oslo
+      'HEL' => 'EFHK',  # Helsinki
+      'WAW' => 'EPWA',  # Warsaw
+      'PRG' => 'LKPR',  # Prague
+      'BUD' => 'LHBP',  # Budapest
+      'IST' => 'LTFM',  # Istanbul
+      'DXB' => 'OMDB',  # Dubai
+      'DOH' => 'OTHH',  # Doha
+      'AUH' => 'OMAA',  # Abu Dhabi
+      'JED' => 'OEJN',  # Jeddah
+      'RUH' => 'OERK',  # Riyadh
+      # Major Asian airports
+      'NRT' => 'RJAA',  # Tokyo Narita
+      'HND' => 'RJTT',  # Tokyo Haneda
+      'ICN' => 'RKSI',  # Seoul Incheon
+      'PEK' => 'ZBAA',  # Beijing
+      'PVG' => 'ZSPD',  # Shanghai Pudong
+      'CAN' => 'ZGGG',  # Guangzhou
+      'SZX' => 'ZGSZ',  # Shenzhen
+      'HKG' => 'VHHH',  # Hong Kong
+      'TPE' => 'RCTP',  # Taipei
+      'SIN' => 'WSSS',  # Singapore
+      'BKK' => 'VTBS',  # Bangkok
+      'KUL' => 'WMKK',  # Kuala Lumpur
+      'CGK' => 'WIII',  # Jakarta
+      'MNL' => 'RPLL',  # Manila
+      'DEL' => 'VIDP',  # Delhi
+      'BOM' => 'VABB',  # Mumbai
+      'CCU' => 'VECC',  # Kolkata
+      'BLR' => 'VOBL',  # Bangalore
+      # Major Australian/New Zealand airports
+      'SYD' => 'YSSY',  # Sydney
+      'MEL' => 'YMML',  # Melbourne
+      'BNE' => 'YBBN',  # Brisbane
+      'PER' => 'YPPH',  # Perth
+      'ADL' => 'YPAD',  # Adelaide
+      'AKL' => 'NZAA',  # Auckland
+      'WLG' => 'NZWN',  # Wellington
+      'CHC' => 'NZCH',  # Christchurch
+      # Major Canadian airports
+      'YYZ' => 'CYYZ',  # Toronto Pearson
+      'YVR' => 'CYVR',  # Vancouver
+      'YUL' => 'CYUL',  # Montreal
+      'YYC' => 'CYYC',  # Calgary
+      'YEG' => 'CYEG',  # Edmonton
+      'YOW' => 'CYOW',  # Ottawa
+      'YHZ' => 'CYHZ',  # Halifax
+      'YWG' => 'CYWG',  # Winnipeg
+      # Major Latin American airports
+      'MEX' => 'MMMX',  # Mexico City
+      'GDL' => 'MMGL',  # Guadalajara
+      'CUN' => 'MMUN',  # Cancun
+      'GRU' => 'SBGR',  # São Paulo
+      'GIG' => 'SBGL',  # Rio de Janeiro
+      'EZE' => 'SAEZ',  # Buenos Aires
+      'SCL' => 'SCEL',  # Santiago
+      'LIM' => 'SPIM',  # Lima
+      'BOG' => 'SKBO',  # Bogotá
+      # Major African airports
+      'JNB' => 'FAOR',  # Johannesburg
+      'CPT' => 'FACT',  # Cape Town
+      'CAI' => 'HECA',  # Cairo
+      'NBO' => 'HKJK',  # Nairobi
+      'LOS' => 'DNMM',  # Lagos
+      'ADD' => 'HAAB',  # Addis Ababa
+    }
+    
+    # Check lookup table first
+    return iata_to_icao_map[iata] if iata_to_icao_map[iata]
+    
+    # For US airports, try K + IATA
+    # We'll validate this by trying to fetch METAR data
+    us_icao
+  end
+
   def icao_code?(code)
     return false unless code =~ /^[A-Z]{4}$/i
     prefix = code[0].upcase
@@ -692,10 +945,19 @@ class WeatherScript
     # Validate coordinates
     return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
     
+    # Build current parameters - include additional data if requested
+    current_params = "temperature_2m,weather_code,is_day"
+    if @config['show_precipitation'] == 'YES' || @config['show_wind'] == 'YES' || @config['show_pressure'] == 'YES' || @config['show_humidity'] == 'YES'
+      current_params += ",precipitation" if @config['show_precipitation'] == 'YES'
+      current_params += ",wind_speed_10m,wind_direction_10m,wind_gusts_10m" if @config['show_wind'] == 'YES'
+      current_params += ",pressure_msl" if @config['show_pressure'] == 'YES'
+      current_params += ",relative_humidity_2m" if @config['show_humidity'] == 'YES'
+    end
+    
     url = "https://api.open-meteo.com/v1/forecast?" +
           "latitude=#{lat}&longitude=#{lon}&" +
-          "current=temperature_2m,weather_code,is_day&" +
-          "temperature_unit=fahrenheit&timezone=auto"
+          "current=#{current_params}&" +
+          "temperature_unit=fahrenheit&wind_speed_unit=ms&precipitation_unit=mm&timezone=auto"
     
     response = http_get(url, HTTP_TIMEOUT_LONG)
     return nil unless response
@@ -715,7 +977,20 @@ class WeatherScript
     
     write_timezone_file(timezone)
     
-    [temp, condition, timezone]
+    # Extract additional data
+    result = {
+      temp: temp,
+      condition: condition,
+      timezone: timezone,
+      precipitation: data['current']['precipitation'],
+      wind_speed: data['current']['wind_speed_10m'],
+      wind_direction: data['current']['wind_direction_10m'],
+      wind_gusts: data['current']['wind_gusts_10m'],
+      pressure: data['current']['pressure_msl'],
+      humidity: data['current']['relative_humidity_2m']
+    }
+    
+    result
   end
 
   def write_timezone_file(timezone)
@@ -767,6 +1042,34 @@ class WeatherScript
     codes[code] || 'Unknown'
   end
 
+  # Unit conversion functions
+  def mm_to_inches(mm)
+    return nil unless mm && mm.is_a?(Numeric)
+    (mm / 25.4).round(2)
+  end
+
+  def ms_to_mph(ms)
+    return nil unless ms && ms.is_a?(Numeric)
+    (ms * 2.23694).round
+  end
+
+  def ms_to_kmh(ms)
+    return nil unless ms && ms.is_a?(Numeric)
+    (ms * 3.6).round
+  end
+
+  def hpa_to_inhg(hpa)
+    return nil unless hpa && hpa.is_a?(Numeric)
+    (hpa * 0.02953).round(2)
+  end
+
+  def wind_direction_to_cardinal(degrees)
+    return nil unless degrees && degrees.is_a?(Numeric)
+    directions = %w[N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW]
+    index = ((degrees + 11.25) / 22.5).round % 16
+    directions[index]
+  end
+
   def fetch_weather_nws(lat, lon)
     # Validate coordinates are within valid ranges
     return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
@@ -794,6 +1097,12 @@ class WeatherScript
     # Step 2: Get current observations first (matching Perl version - current conditions, not forecast)
     temp = nil
     condition = nil
+    precipitation = nil
+    wind_speed = nil
+    wind_direction = nil
+    wind_gusts = nil
+    pressure = nil
+    humidity = nil
     
     if observation_stations_url
       # Get list of observation stations
@@ -813,22 +1122,23 @@ class WeatherScript
             
             obs_data = safe_decode_json(response)
             next unless obs_data && obs_data['properties']
+            props = obs_data['properties']
             
             # Temperature is in Celsius, convert to Fahrenheit (use current observation)
-            temp_c = obs_data['properties']['temperature'] && obs_data['properties']['temperature']['value']
+            temp_c = props['temperature'] && props['temperature']['value']
             if temp_c && temp_c.is_a?(Numeric)
               temp = (temp_c * 9.0 / 5.0) + 32.0
             end
             
             # Get condition from observations (current conditions take priority)
-            condition_text = obs_data['properties']['textDescription'] || ''
+            condition_text = props['textDescription'] || ''
             if condition_text && !condition_text.empty?
               condition = parse_nws_condition(condition_text)
             end
             
             # If still no condition, try icon field as fallback
             if !condition
-              icon = obs_data['properties']['icon'] || ''
+              icon = props['icon'] || ''
               if icon.include?('skc') || icon.include?('clear')
                 condition = 'Clear'
               elsif icon.include?('few')
@@ -838,6 +1148,39 @@ class WeatherScript
               elsif icon.include?('bkn') || icon.include?('ovc')
                 condition = 'Cloudy'
               end
+            end
+            
+            # Extract additional data if requested
+            if @config['show_precipitation'] == 'YES'
+              # NWS provides precipitation in mm
+              precip_mm = props['precipitationLastHour'] && props['precipitationLastHour']['value']
+              precipitation = precip_mm if precip_mm && precip_mm.is_a?(Numeric)
+            end
+            
+            if @config['show_wind'] == 'YES'
+              # NWS provides wind speed in m/s
+              ws = props['windSpeed'] && props['windSpeed']['value']
+              wind_speed = ws if ws && ws.is_a?(Numeric)
+              
+              wd = props['windDirection'] && props['windDirection']['value']
+              wind_direction = wd if wd && wd.is_a?(Numeric)
+              
+              wg = props['windGust'] && props['windGust']['value']
+              wind_gusts = wg if wg && wg.is_a?(Numeric)
+            end
+            
+            if @config['show_pressure'] == 'YES'
+              # NWS provides pressure in Pa, convert to hPa
+              press_pa = props['seaLevelPressure'] && props['seaLevelPressure']['value']
+              if press_pa && press_pa.is_a?(Numeric)
+                pressure = press_pa / 100.0  # Convert Pa to hPa
+              end
+            end
+            
+            if @config['show_humidity'] == 'YES'
+              # NWS provides relative humidity as percentage
+              rh = props['relativeHumidity'] && props['relativeHumidity']['value']
+              humidity = rh if rh && rh.is_a?(Numeric)
             end
             
             # Stop if we have both temp and condition
@@ -881,7 +1224,17 @@ class WeatherScript
     
     write_timezone_file(timezone)
     
-    [temp, condition, timezone]
+    {
+      temp: temp,
+      condition: condition,
+      timezone: timezone,
+      precipitation: precipitation,
+      wind_speed: wind_speed,
+      wind_direction: wind_direction,
+      wind_gusts: wind_gusts,
+      pressure: pressure,
+      humidity: humidity
+    }
   end
 
   def parse_nws_condition(text)

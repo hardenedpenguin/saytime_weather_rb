@@ -28,12 +28,40 @@ Temperature_mode = F
 process_condition = YES
 default_country = us
 weather_provider = openmeteo
+show_precipitation = NO
+show_wind = NO
+show_pressure = NO
+show_humidity = NO
+show_zero_precip = NO
+precip_trace_mm = 0.10
 ```
+
+### Basic Options
 
 - **Temperature_mode**: `F` for Fahrenheit or `C` for Celsius (default: `F`)
 - **process_condition**: `YES` to process weather conditions, `NO` to skip (default: `YES`)
 - **default_country**: ISO country code for postal code lookups (default: `us`)
 - **weather_provider**: `openmeteo` for worldwide or `nws` for US only (default: `openmeteo`)
+
+### Additional Weather Data
+
+The following options control display of additional weather information. Units are automatically selected based on `Temperature_mode`:
+
+- **show_precipitation**: `YES` to show precipitation (default: `NO`)
+  - F mode: inches (in)
+  - C mode: millimeters (mm)
+- **show_wind**: `YES` to show wind speed and direction (default: `NO`)
+  - F mode: miles per hour (mph)
+  - C mode: kilometers per hour (km/h)
+- **show_pressure**: `YES` to show barometric pressure (default: `NO`)
+  - F mode: inches of mercury (inHG)
+  - C mode: hectopascals (hPa)
+- **show_humidity**: `YES` to show relative humidity percentage (default: `NO`)
+  - Displays as "65% RH"
+- **show_zero_precip**: `YES` to show precipitation even when zero (default: `NO`)
+  - If `NO`, precipitation is only shown when there's measurable precipitation
+- **precip_trace_mm**: Minimum precipitation threshold in millimeters (default: `0.10`)
+  - Precipitation below this value is hidden unless `show_zero_precip = YES`
 
 ## Usage
 
@@ -46,11 +74,30 @@ sudo /usr/sbin/weather.rb <location>
 Examples:
 ```bash
 sudo /usr/sbin/weather.rb 75001                    # US postal code
-sudo /usr/sbin/weather.rb KDFW                     # ICAO airport code
+sudo /usr/sbin/weather.rb DFW                      # IATA airport code (3 letters)
+sudo /usr/sbin/weather.rb KDFW                     # ICAO airport code (4 letters)
 sudo /usr/sbin/weather.rb --default-country fr 75001  # International
+sudo /usr/sbin/weather.rb 75001 v                  # Display text only (verbose mode)
 ```
 
-Options: `-d, --default-country CC`, `-c, --config-file FILE`, `-h, --help`
+Options: `-d, --default-country CC`, `-c, --config-file FILE`, `-t, --temperature-mode M`, `--no-condition`, `-v, --verbose`, `-h, --help`
+
+### Output Format
+
+The weather script outputs a formatted string with temperature, condition, and optionally additional data:
+
+```
+75°F, 24°C / Clear
+75°F, 24°C / 65% RH / Clear / Precip 0.25 in / Wind 15 mph SW (gust 22) / 29.92 inHG
+```
+
+The format includes:
+- Temperature in both Fahrenheit and Celsius
+- Relative humidity (if `show_humidity = YES`)
+- Weather condition
+- Precipitation (if `show_precipitation = YES`)
+- Wind speed, direction, and gusts (if `show_wind = YES`)
+- Barometric pressure (if `show_pressure = YES`)
 
 ### Time Script
 

@@ -1,3 +1,39 @@
+saytime-weather-rb (0.0.4-1) unstable; urgency=medium
+
+  * weather.rb: Add IATA airport code support
+    - Added support for 3-letter IATA airport codes (e.g., JFK, LHR, DFW)
+    - Automatically converts IATA codes to ICAO codes for METAR lookups
+    - Includes comprehensive lookup table for international airports
+    - Updated help text and error messages to document IATA support
+  * weather.rb: Add additional weather data display options
+    - Added show_precipitation option with automatic unit selection (inches/mm)
+    - Added show_wind option with automatic unit selection (mph/km/h)
+    - Added show_pressure option with automatic unit selection (inHG/hPa)
+    - Units automatically match Temperature_mode setting (F = imperial, C = metric)
+    - Wind display includes direction (cardinal) and gusts when available
+  * weather.rb: Add humidity display option
+    - Added show_humidity option to display relative humidity percentage
+    - Retrieves humidity data from both Open-Meteo and NWS APIs
+    - Displays as "65% RH" format
+  * weather.rb: Add zero precipitation handling
+    - Added show_zero_precip option to control zero precipitation display
+    - Added precip_trace_mm option for minimum precipitation threshold
+    - Improves output quality by hiding trace amounts when not needed
+  * weather.rb: Update API fetch methods for additional data
+    - Modified fetch_weather_openmeteo() to retrieve precipitation, wind, pressure, humidity
+    - Modified fetch_weather_nws() to retrieve precipitation, wind, pressure, humidity
+    - Changed return format to hash for better data organization
+  * weather.rb: Add unit conversion functions
+    - Added mm_to_inches() for precipitation conversion
+    - Added ms_to_mph() and ms_to_kmh() for wind speed conversion
+    - Added hpa_to_inhg() for pressure conversion
+    - Added wind_direction_to_cardinal() for wind direction display
+  * weather.ini.default: Add documentation for new options
+    - Documented all new configuration options with examples
+
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sun, 25 Jan 2026 10:52:49 -0600
+
 saytime-weather-rb (0.0.3-1) unstable; urgency=medium
 
   * saytime.rb: Fix custom sound directory path validation

@@ -52,3 +52,49 @@ default_country = us
 ; Default: openmeteo
 weather_provider = openmeteo
 
+; ============================================================================
+; ADDITIONAL WEATHER DATA
+; ============================================================================
+
+; Show precipitation in weather output
+; Units are automatically selected based on Temperature_mode:
+;   F mode: inches (in)
+;   C mode: millimeters (mm)
+; Valid values: YES, NO
+; Default: NO
+show_precipitation = NO
+
+; Show wind speed and direction in weather output
+; Units are automatically selected based on Temperature_mode:
+;   F mode: miles per hour (mph)
+;   C mode: kilometers per hour (km/h)
+; Valid values: YES, NO
+; Default: NO
+show_wind = NO
+
+; Show barometric pressure in weather output
+; Units are automatically selected based on Temperature_mode:
+;   F mode: inches of mercury (inHG)
+;   C mode: hectopascals (hPa)
+; Valid values: YES, NO
+; Default: NO
+show_pressure = NO
+
+; Show relative humidity in weather output
+; Displays as percentage (e.g., "65% RH")
+; Valid values: YES, NO
+; Default: NO
+show_humidity = NO
+
+; Show precipitation even when zero
+; If NO, precipitation is only shown when there is measurable precipitation
+; Valid values: YES, NO
+; Default: NO
+show_zero_precip = NO
+
+; Minimum precipitation threshold in millimeters
+; Precipitation below this value will not be shown unless show_zero_precip = YES
+; Valid values: decimal number (e.g., 0.10)
+; Default: 0.10
+precip_trace_mm = 0.10
+
