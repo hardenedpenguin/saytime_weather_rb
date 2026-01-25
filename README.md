@@ -14,8 +14,8 @@ A Ruby implementation of a time and weather announcement system for Asterisk PBX
 
 ```bash
 cd /tmp
-wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.2/saytime-weather-rb_0.0.2-1_all.deb
-sudo apt install ./saytime-weather-rb_0.0.2-1_all.deb
+wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.3/saytime-weather-rb_0.0.3-1_all.deb
+sudo apt install ./saytime-weather-rb_0.0.3-1_all.deb
 ```
 
 ## Configuration
