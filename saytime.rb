@@ -146,7 +146,7 @@ class SaytimeScript
     puts "      --no-weather        Disable weather announcements"
     puts "  -g, --greeting          Enable greeting messages (default: on)"
     puts "      --no-greeting       Disable greeting messages"
-      puts "  -m, --method=METHOD     Playback method: localplay or playback (default: localplay)"
+    puts "  -m, --method=METHOD     Playback method: localplay or playback (default: localplay)"
     puts "      --sound-dir=DIR     Use custom sound directory"
     puts "                          (default: /usr/share/asterisk/sounds/en)"
     puts "      --log=FILE          Log to specified file (default: none)"
