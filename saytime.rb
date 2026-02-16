@@ -343,7 +343,11 @@ class SaytimeScript
       files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw", @missing_files)
       
       if minute != 0
-        files << add_sound_file("#{sound_dir}/digits/0.ulaw", @missing_files) if minute < 10
+        # Use "o" (oh) from letters for leading minute in 12-hour, e.g. 2:06 -> "2 o 6" not "2 zero 6"
+        if minute < 10
+          o_file = "#{sound_dir}/letters/o.ulaw"
+          files << add_sound_file(File.exist?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw", @missing_files)
+        end
         files << format_number(minute, sound_dir)
       end
       am_pm = hour < 12 ? 'a-m' : 'p-m'
