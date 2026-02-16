@@ -1,3 +1,13 @@
+saytime-weather-rb (0.0.6-1) unstable; urgency=medium
+
+  * saytime.rb: 12-hour clock says "2 o 6" instead of "2 zero 6"
+    - Use letters/o.ulaw for leading minute in 12-hour times (e.g. 2:06 -> "two oh six")
+    - Fall back to digits/0.ulaw when letters/o.ulaw is not present
+  * saytime.rb: Fix help text indentation for -m/--method option
+  * README: Document 12-hour "oh" behavior and letters/o.ulaw
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Mon, 16 Feb 2026 12:00:00 -0600
+
 saytime-weather-rb (0.0.5-1) unstable; urgency=medium
 
   * weather.rb: Fix NoMethodError when using airport codes with additional weather data
