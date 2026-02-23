@@ -142,7 +142,17 @@ Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-v, --verbose`,
 
 **12-hour format:** Times like 2:06 are announced as "two oh six" using `letters/o.ulaw` when present, otherwise the digit zero is used.
 
-**Timezone:** When weather is enabled (default), the timezone is determined by `weather.rb` based on the location's weather data. When using `--no-weather`, `weather.rb` is not called and the timezone falls back to the system's local time. You can override this behavior by setting the `TZ` environment variable when running `saytime.rb` (e.g., `TZ=UTC saytime.rb -l 75001 -n 123456` for UTC time, or `TZ=Europe/London saytime.rb -l 75001 -n 123456` for London time). The `TZ` environment variable takes precedence over all other timezone sources.
+### When the announced time is in a timezone vs system local time
+
+| Situation | What time is announced |
+|-----------|------------------------|
+| **`TZ` is set** (e.g. `TZ=UTC`, `TZ=Europe/London`) | Time in that timezone. `TZ` overrides everything. |
+| **Weather on, location = postal code**, weather ran successfully | Time in the **location’s timezone** (from Open-Meteo or NWS; written to `/tmp/timezone` by `weather.rb`). |
+| **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK) | **System local time.** METAR/aviation APIs do not provide timezone, so no timezone file is written. |
+| **`--no-weather`** | **System local time** (weather is not run, so no location timezone is available). |
+| **Weather on but no valid timezone** (e.g. weather failed, or timezone file missing/invalid) | **System local time** (fallback). |
+
+Summary: **Timezone is used** only when (1) you set `TZ`, or (2) weather is enabled, you pass a **postal code** (or location that resolves to coordinates), and `weather.rb` successfully gets weather from Open-Meteo or NWS and writes a timezone. **ICAO/IATA (airport codes) use system local time** because METAR does not supply timezone. All other cases announce **system local time**.
 
 Run with `--help` for complete option list.
 
