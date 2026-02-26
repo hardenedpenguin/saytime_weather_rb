@@ -1,5 +1,7 @@
 # Saytime Weather (Ruby Version)
 
+![GitHub total downloads](https://img.shields.io/github/downloads/hardenedpenguin/saytime_weather_rb/total?style=flat-square)
+
 A Ruby implementation of a time and weather announcement system for Asterisk PBX, designed for radio systems, repeater controllers, and amateur radio applications. Complete rewrite in Ruby with zero external dependencies.
 
 > **⚠️ WARNING:** Do not install this package alongside any other version of saytime_weather. This Ruby implementation is a complete replacement and conflicts with other implementations. Please uninstall any existing saytime_weather packages before installing this one.
