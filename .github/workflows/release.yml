@@ -1,0 +1,61 @@
+# Build .deb and attach to GitHub Release when a version tag is pushed.
+# Then update README on main so the install command points at the new release.
+# Usage: update debian/changelog and VERSION in scripts, then:
+#   git tag v0.0.7 && git push origin v0.0.7
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper ruby
+
+      - name: Build .deb
+        run: dpkg-buildpackage -us -uc -b
+
+      - name: Copy .deb into workspace
+        run: cp ../*.deb .
+
+      - name: Create Release and upload .deb
+        uses: softprops/action-gh-release@v2
+        with:
+          files: *.deb
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-readme:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update README for new release
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          sed -i "s|releases/download/v[0-9.]*/|releases/download/${TAG}/|g" README.md
+          sed -i "s|saytime-weather-rb_[0-9.]*-1_all|saytime-weather-rb_${VERSION}-1_all|g" README.md
+
+      - name: Commit and push README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || (git add README.md && git commit -m "README: point install to ${{ github.ref_name }} release" && git push)
