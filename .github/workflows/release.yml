@@ -19,26 +19,18 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debhelper ruby
+          sudo apt-get install -y build-essential debhelper ruby
 
       - name: Build .deb
         run: dpkg-buildpackage -us -uc -b
 
       - name: Copy .deb into workspace
-        run: |
-          deb="../saytime-weather-rb_"*_all.deb
-          if ! cp $deb . 2>/dev/null; then
-            echo "::error::No .deb found (expected $deb); build may have failed."
-            exit 1
-          fi
-          ls -la *.deb
+        run: cp ../*.deb .
 
       - name: Create Release and upload .deb
         uses: softprops/action-gh-release@v2
         with:
           files: "*.deb"
-          overwrite_files: true
-          fail_on_unmatched_files: true
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
