@@ -1,3 +1,13 @@
+saytime-weather-rb (0.0.7-1) unstable; urgency=medium
+
+  * weather.rb: Add require 'fileutils' for create_default_config
+  * weather.rb: HTTP retries in http_get (3 attempts, 1s delay between)
+  * saytime.rb: Fix $?.exitstatus when nil; report -1 for unknown exit code
+  * saytime.rb: Implement --log=FILE (append run and message log with UTC timestamps)
+  * Project: No support for deprecated /var/lib/asterisk/sounds (ASL3); ulaw-only, no gsm
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Thu, 20 Feb 2026 12:00:00 -0600
+
 saytime-weather-rb (0.0.6-1) unstable; urgency=medium
 
   * saytime.rb: 12-hour clock says "2 o 6" instead of "2 zero 6"

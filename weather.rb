@@ -13,8 +13,9 @@ require 'uri'
 require 'json'
 require 'optparse'
 require 'tempfile'
+require 'fileutils'
 
-VERSION = '0.0.6'
+VERSION = '0.0.7'
 TMP_DIR = '/tmp'
 TEMP_FILE = '/tmp/temperature'
 COND_FILE = '/tmp/condition.ulaw'
@@ -582,63 +583,67 @@ class WeatherScript
     $stderr.puts "ERROR: #{msg}"
   end
 
+  HTTP_GET_RETRIES = 3
+  HTTP_GET_RETRY_SLEEP = 1
+
   def http_get(url, timeout = HTTP_TIMEOUT_SHORT, user_agent = nil, max_redirects = 5)
     return nil if max_redirects <= 0
-    
-    begin
-      uri = URI(url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == 'https'
-      http.open_timeout = timeout
-      http.read_timeout = timeout
-      
-      request = Net::HTTP::Get.new(uri)
-      request['User-Agent'] = user_agent || 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
-      
-      response = http.request(request)
-      response_code = response.code.to_i
-      
-      case response_code
-      when 200
-        response.body
-      when 301, 302, 303, 307, 308
-        # Handle redirects
-        location = response['Location'] || response['location']
-        if location
-          # Use URI to properly resolve relative URLs
-          begin
-            redirect_uri = URI(location)
-            if redirect_uri.relative?
-              redirect_uri = uri + redirect_uri
-            end
-            redirect_url = redirect_uri.to_s
-            return http_get(redirect_url, timeout, user_agent, max_redirects - 1)
-          rescue => e
-            warn("Failed to follow redirect: #{e.message}") if @options[:verbose]
-          end
+
+    HTTP_GET_RETRIES.times do |attempt|
+      result = http_get_once(url, timeout, user_agent, max_redirects)
+      return result if result
+      next if attempt == HTTP_GET_RETRIES - 1
+      sleep(HTTP_GET_RETRY_SLEEP)
+    end
+    nil
+  end
+
+  def http_get_once(url, timeout, user_agent, max_redirects)
+    uri = URI(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = uri.scheme == 'https'
+    http.open_timeout = timeout
+    http.read_timeout = timeout
+
+    request = Net::HTTP::Get.new(uri)
+    request['User-Agent'] = user_agent || 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
+
+    response = http.request(request)
+    response_code = response.code.to_i
+
+    case response_code
+    when 200
+      response.body
+    when 301, 302, 303, 307, 308
+      location = response['Location'] || response['location']
+      if location
+        begin
+          redirect_uri = URI(location)
+          redirect_uri = uri + redirect_uri if redirect_uri.relative?
+          return http_get(redirect_uri.to_s, timeout, user_agent, max_redirects - 1)
+        rescue => e
+          warn("Failed to follow redirect: #{e.message}") if @options[:verbose]
         end
-        nil
-      when 429
-        # Rate limited
-        warn("Rate limited by server, please wait before retrying") if @options[:verbose]
-        nil
-      when 404
-        # Not found
-        nil
-      else
-        warn("HTTP error #{response_code} from #{uri.host}") if @options[:verbose]
-        nil
       end
-    rescue URI::InvalidURIError => e
-      warn("Invalid URL: #{url}") if @options[:verbose]
       nil
-    rescue Net::TimeoutError => e
-      warn("Request timeout for #{url}") if @options[:verbose]
+    when 429
+      warn("Rate limited by server, please wait before retrying") if @options[:verbose]
       nil
-    rescue => e
-      warn("HTTP request failed: #{e.message}") if @options[:verbose]
+    when 404
+      nil
+    else
+      warn("HTTP error #{response_code} from #{uri.host}") if @options[:verbose]
       nil
     end
+  rescue URI::InvalidURIError => e
+    warn("Invalid URL: #{url}") if @options[:verbose]
+    nil
+  rescue Net::TimeoutError => e
+    warn("Request timeout for #{url}") if @options[:verbose]
+    nil
+  rescue => e
+    warn("HTTP request failed: #{e.message}") if @options[:verbose]
+    nil
   end
 
   def safe_decode_json(content)
