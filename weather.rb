@@ -9,6 +9,7 @@
 # - Creates sound files for temperature and conditions
 
 require 'net/http'
+require 'socket'
 require 'uri'
 require 'json'
 require 'optparse'
@@ -638,8 +639,11 @@ class WeatherScript
   rescue URI::InvalidURIError => e
     warn("Invalid URL: #{url}") if @options[:verbose]
     nil
-  rescue Net::TimeoutError => e
+  rescue Net::OpenTimeout, Net::ReadTimeout => e
     warn("Request timeout for #{url}") if @options[:verbose]
+    nil
+  rescue Socket::ResolutionError => e
+    warn("DNS resolution failed for #{uri.host}: #{e.message}") if @options[:verbose]
     nil
   rescue => e
     warn("HTTP request failed: #{e.message}") if @options[:verbose]
