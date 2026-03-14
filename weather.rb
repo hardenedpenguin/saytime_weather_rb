@@ -310,7 +310,8 @@ class WeatherScript
             timezone = weather_data[:timezone]
             @weather_data = weather_data  # Store for display
             w_type = provider unless w_type
-            
+            warn("Weather from #{provider.upcase}") if @options[:verbose]
+
           else
             provider_name = provider.upcase
             error("Failed to fetch weather data from #{provider_name}")
