@@ -2,6 +2,18 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.9] - 2026-04-06
+
+### Added
+- **`lib/saytime_weather/ini.rb`**: shared `SaytimeWeather::Ini.parse_file` for INI parsing (used by weather and saytime config paths).
+- **`lib/saytime_weather/constants.rb`**: `HTTP_BUFFER_SIZE`, saytime default flags, and `SAYTIME_PLAY_DELAY`.
+- **Weather modules** (`weather_*`): config, geocoding, airports/METAR, Open-Meteo, NWS, units, helpers, sound assembly; `weather.rb` is a thin entry script that includes them.
+- **Saytime modules** (`saytime_*`): CLI, config, logging, time formatting, weather subprocess bridge, playback/concat; `saytime.rb` is a thin entry script that includes them.
+
+### Changed
+- **`Paths.weather_script_path`**: resolves `weather.rb` via `SaytimeWeather.root` (consistent with packaged layout).
+- **`WeatherHelpers#parse_ini_file`** now delegates to `Ini.parse_file`.
+
 ## [0.0.8] - 2026-04-05
 
 ### Added
@@ -55,6 +67,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.9]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.5...v0.0.6

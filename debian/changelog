@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.9-1) unstable; urgency=medium
+
+  * Refactor: split weather.rb and saytime.rb into lib/saytime_weather modules
+  * Add Ini.parse_file, constants (buffer size, saytime defaults), Paths.weather_script_path
+  * Debian: install new weather_* and saytime_* library files; Makefile syntax checks
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sun, 06 Apr 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.8-1) unstable; urgency=medium
 
   * Refactor: lib/saytime_weather (paths, endpoints, HTTP client, network tunables)

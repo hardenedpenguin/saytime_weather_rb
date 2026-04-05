@@ -32,6 +32,10 @@ module SaytimeWeather
       File.join(tmp_dir, 'saytime-weather-ourairports.csv')
     end
 
+    def weather_script_path
+      File.join(SaytimeWeather.root, 'weather.rb')
+    end
+
     # Prefixes allowed for combined sound file paths (saytime safety check)
     def sound_path_prefixes(custom_dir = nil)
       en = asterisk_sounds_en
