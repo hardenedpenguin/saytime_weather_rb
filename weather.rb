@@ -5,11 +5,12 @@
 # Copyright 2026 Jory A. Pratt, W5GLE
 #
 # - Fetches weather from Open-Meteo or NWS APIs (free, no API keys)
-# - Supports postal codes, IATA airport codes, ICAO airport codes, and special locations
+# - Supports postal codes, IATA airport codes (via Our Airports public CSV), ICAO codes, special locations
 # - Creates sound files for temperature and conditions
 
 require 'net/http'
 require 'socket'
+require 'csv'
 require 'uri'
 require 'json'
 require 'optparse'
@@ -30,6 +31,12 @@ HTTP_TIMEOUT_LONG = 15
 HTTP_BUFFER_SIZE = 8192
 NOMINATIM_DELAY = 1
 
+# Public airport registry (CSV over HTTPS). Refreshed into TMP_DIR periodically.
+# https://ourairports.com/data.html
+AIRPORTS_DATA_URL = 'https://ourairports.com/data/airports.csv'
+AIRPORTS_CACHE_PATH = "#{TMP_DIR}/saytime-weather-ourairports.csv"
+AIRPORTS_CACHE_MAX_AGE = 7 * 24 * 3600 # seconds
+
 class WeatherScript
   attr_reader :options, :config
 
@@ -43,6 +50,7 @@ class WeatherScript
     }
     @config = {}
     @provider_explicitly_set = false
+    @airport_iata_map = nil
     parse_options
     load_config
   end
@@ -668,150 +676,52 @@ class WeatherScript
     true
   end
 
+  def refresh_airports_cache_if_stale
+    stale = !File.exist?(AIRPORTS_CACHE_PATH) ||
+            (Time.now - File.mtime(AIRPORTS_CACHE_PATH)) > AIRPORTS_CACHE_MAX_AGE
+    return unless stale
+
+    body = http_get(AIRPORTS_DATA_URL, HTTP_TIMEOUT_LONG, 'Mozilla/5.0 (compatible; WeatherBot/1.0)')
+    return if body.nil? || body.empty?
+
+    tmp = "#{AIRPORTS_CACHE_PATH}.part"
+    File.write(tmp, body)
+    File.rename(tmp, AIRPORTS_CACHE_PATH)
+  rescue => e
+    warn("Airports data download failed: #{e.message}") if @options[:verbose]
+  end
+
+  def build_airport_iata_map
+    refresh_airports_cache_if_stale
+    return {} unless File.exist?(AIRPORTS_CACHE_PATH)
+
+    map = {}
+    CSV.foreach(AIRPORTS_CACHE_PATH, headers: true) do |row|
+      iata = row['iata_code']&.strip&.upcase
+      next unless iata && iata.length == 3 && iata.match?(/\A[A-Z]{3}\z/)
+
+      icao = row['icao_code']&.strip&.upcase
+      next if icao.nil? || icao.empty?
+
+      map[iata] = icao
+    end
+    map
+  rescue => e
+    warn("Failed to parse airports data: #{e.message}") if @options[:verbose]
+    {}
+  end
+
+  def airport_iata_to_icao_map
+    @airport_iata_map ||= build_airport_iata_map
+  end
+
   def iata_to_icao(iata)
     iata = iata.upcase
-    
-    # US airports: ICAO is typically K + IATA
-    # Try this first for US airports
-    us_icao = "K#{iata}"
-    
-    # International IATA to ICAO mapping for common airports
-    # This covers major international airports that don't follow the K+IATA pattern
-    iata_to_icao_map = {
-      # Major European airports
-      'LHR' => 'EGLL',  # London Heathrow
-      'LGW' => 'EGKK',  # London Gatwick
-      'MAN' => 'EGCC',  # Manchester
-      'BHX' => 'EGBB',  # Birmingham
-      'EDI' => 'EGPH',  # Edinburgh
-      'GLA' => 'EGPF',  # Glasgow
-      'CDG' => 'LFPG',  # Paris Charles de Gaulle
-      'ORY' => 'LFPO',  # Paris Orly
-      'NCE' => 'LFMN',  # Nice
-      'LYS' => 'LFLL',  # Lyon
-      'MRS' => 'LFML',  # Marseille
-      'TLS' => 'LFBO',  # Toulouse
-      'BOD' => 'LFBD',  # Bordeaux
-      'FRA' => 'EDDF',  # Frankfurt
-      'MUC' => 'EDDM',  # Munich
-      'BER' => 'EDDB',  # Berlin Brandenburg
-      'DUS' => 'EDDL',  # Düsseldorf
-      'HAM' => 'EDDH',  # Hamburg
-      'STR' => 'EDDS',  # Stuttgart
-      'CGN' => 'EDDK',  # Cologne
-      'AMS' => 'EHAM',  # Amsterdam
-      'RTM' => 'EHRD',  # Rotterdam
-      'BRU' => 'EBBR',  # Brussels
-      'ZUR' => 'LSZH',  # Zurich
-      'GVA' => 'LSGG',  # Geneva
-      'VIE' => 'LOWW',  # Vienna
-      'MAD' => 'LEMD',  # Madrid
-      'BCN' => 'LEBL',  # Barcelona
-      'PMI' => 'LEPA',  # Palma de Mallorca
-      'AGP' => 'LEMG',  # Málaga
-      'VLC' => 'LEVC',  # Valencia
-      'FCO' => 'LIRF',  # Rome Fiumicino
-      'MXP' => 'LIMC',  # Milan Malpensa
-      'NAP' => 'LIRN',  # Naples
-      'VCE' => 'LIPZ',  # Venice Marco Polo
-      'BGY' => 'LIME',  # Milan Bergamo
-      'LIS' => 'LPPT',  # Lisbon
-      'OPO' => 'LPPR',  # Porto
-      'ATH' => 'LGAV',  # Athens
-      'SKG' => 'LGTS',  # Thessaloniki
-      'DUB' => 'EIDW',  # Dublin
-      'CPH' => 'EKCH',  # Copenhagen
-      'ARN' => 'ESSA',  # Stockholm
-      'OSL' => 'ENGM',  # Oslo
-      'HEL' => 'EFHK',  # Helsinki
-      'WAW' => 'EPWA',  # Warsaw
-      'KRK' => 'EPKK',  # Kraków
-      'GDN' => 'EPGD',  # Gdańsk
-      'PRG' => 'LKPR',  # Prague
-      'BUD' => 'LHBP',  # Budapest
-      'OTP' => 'LROP',  # Bucharest
-      'IST' => 'LTFM',  # Istanbul
-      'ESB' => 'LTAC',  # Ankara
-      'ADB' => 'LTBJ',  # Izmir
-      'SVO' => 'UUEE',  # Moscow Sheremetyevo
-      'LED' => 'ULLI',  # St Petersburg
-      'DXB' => 'OMDB',  # Dubai
-      'DOH' => 'OTHH',  # Doha
-      'AUH' => 'OMAA',  # Abu Dhabi
-      'JED' => 'OEJN',  # Jeddah
-      'RUH' => 'OERK',  # Riyadh
-      # Major Asian airports
-      'NRT' => 'RJAA',  # Tokyo Narita
-      'HND' => 'RJTT',  # Tokyo Haneda
-      'KIX' => 'RJBB',  # Osaka Kansai
-      'NGO' => 'RJGG',  # Nagoya
-      'ICN' => 'RKSI',  # Seoul Incheon
-      'GMP' => 'RKSS',  # Seoul Gimpo
-      'PEK' => 'ZBAA',  # Beijing
-      'PVG' => 'ZSPD',  # Shanghai Pudong
-      'CTU' => 'ZUUU',  # Chengdu
-      'XIY' => 'ZLXY',  # Xi'an
-      'CAN' => 'ZGGG',  # Guangzhou
-      'SZX' => 'ZGSZ',  # Shenzhen
-      'HKG' => 'VHHH',  # Hong Kong
-      'TPE' => 'RCTP',  # Taipei
-      'SIN' => 'WSSS',  # Singapore
-      'BKK' => 'VTBS',  # Bangkok
-      'KUL' => 'WMKK',  # Kuala Lumpur
-      'CGK' => 'WIII',  # Jakarta
-      'MNL' => 'RPLL',  # Manila
-      'DEL' => 'VIDP',  # Delhi
-      'BOM' => 'VABB',  # Mumbai
-      'CCU' => 'VECC',  # Kolkata
-      'BLR' => 'VOBL',  # Bangalore
-      # Major Australian/New Zealand airports
-      'SYD' => 'YSSY',  # Sydney
-      'MEL' => 'YMML',  # Melbourne
-      'BNE' => 'YBBN',  # Brisbane
-      'PER' => 'YPPH',  # Perth
-      'ADL' => 'YPAD',  # Adelaide
-      'AKL' => 'NZAA',  # Auckland
-      'WLG' => 'NZWN',  # Wellington
-      'CHC' => 'NZCH',  # Christchurch
-      # Major Canadian airports
-      'YYZ' => 'CYYZ',  # Toronto Pearson
-      'YVR' => 'CYVR',  # Vancouver
-      'YUL' => 'CYUL',  # Montreal
-      'YYC' => 'CYYC',  # Calgary
-      'YEG' => 'CYEG',  # Edmonton
-      'YOW' => 'CYOW',  # Ottawa
-      'YHZ' => 'CYHZ',  # Halifax
-      'YWG' => 'CYWG',  # Winnipeg
-      # Major Latin American airports
-      'MEX' => 'MMMX',  # Mexico City
-      'GDL' => 'MMGL',  # Guadalajara
-      'CUN' => 'MMUN',  # Cancun
-      'MTY' => 'MMMY',  # Monterrey
-      'GRU' => 'SBGR',  # São Paulo
-      'GIG' => 'SBGL',  # Rio de Janeiro
-      'BSB' => 'SBBR',  # Brasília
-      'CNF' => 'SBCF',  # Belo Horizonte
-      'EZE' => 'SAEZ',  # Buenos Aires
-      'SCL' => 'SCEL',  # Santiago
-      'LIM' => 'SPIM',  # Lima
-      'BOG' => 'SKBO',  # Bogotá
-      'PTY' => 'MPTO',  # Panama City Tocumen
-      'SJO' => 'MROC',  # San José (Costa Rica)
-      # Major African airports
-      'JNB' => 'FAOR',  # Johannesburg
-      'CPT' => 'FACT',  # Cape Town
-      'CAI' => 'HECA',  # Cairo
-      'NBO' => 'HKJK',  # Nairobi
-      'LOS' => 'DNMM',  # Lagos
-      'ADD' => 'HAAB',  # Addis Ababa
-    }
-    
-    # Check lookup table first
-    return iata_to_icao_map[iata] if iata_to_icao_map[iata]
-    
-    # For US airports, try K + IATA
-    # We'll validate this by trying to fetch METAR data
-    us_icao
+    icao = airport_iata_to_icao_map[iata]
+    return icao if icao && !icao.empty?
+
+    # US and US territories: METAR commonly uses K + IATA when not in registry
+    "K#{iata}"
   end
 
   def icao_code?(code)

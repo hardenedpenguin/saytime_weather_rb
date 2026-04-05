@@ -105,6 +105,8 @@ sudo /usr/sbin/weather.rb 75001 v                  # Display text only (verbose 
 
 Options: `-d, --default-country CC`, `-c, --config-file FILE`, `-t, --temperature-mode M`, `--no-condition`, `-v, --verbose`, `-h, --help`
 
+**IATA → ICAO:** The script loads the public [Our Airports](https://ourairports.com/data.html) CSV over HTTPS and caches it under `/tmp/saytime-weather-ourairports.csv` (refreshed when older than seven days). If the registry cannot be fetched and there is no cache yet, unknown three-letter codes fall back to `K` + IATA (US-style), which may be wrong outside the US.
+
 ### Output Format
 
 The weather script outputs a formatted string with temperature, condition, and optionally additional data:
