@@ -1,3 +1,13 @@
+saytime-weather-rb (0.0.8-1) unstable; urgency=medium
+
+  * Refactor: lib/saytime_weather (paths, endpoints, HTTP client, network tunables)
+  * data/special_locations.json for named remote locations (was inline in weather.rb)
+  * Single SaytimeWeather::VERSION; env overrides for tmp, config, sounds, asterisk bin
+  * weather.ini optional keys: http timeouts, nominatim delay, retries, airports URL/age
+  * Package installs lib/ and data/ under /usr/share/saytime-weather-rb/
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sat, 05 Apr 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.7-1) unstable; urgency=medium
 
   * weather.rb: Add require 'fileutils' for create_default_config

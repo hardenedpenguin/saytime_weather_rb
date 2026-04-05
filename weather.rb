@@ -8,8 +8,14 @@
 # - Supports postal codes, IATA airport codes (via Our Airports public CSV), ICAO codes, special locations
 # - Creates sound files for temperature and conditions
 
-require 'net/http'
-require 'socket'
+_weather_entry = File.realpath(__FILE__)
+_weather_root = File.dirname(_weather_entry)
+_package = File.directory?(File.join(_weather_root, 'lib', 'saytime_weather')) ? _weather_root : File.expand_path('../share/saytime-weather-rb', _weather_root)
+_lib = File.join(_package, 'lib')
+$LOAD_PATH.unshift(_lib) unless $LOAD_PATH.include?(_lib)
+require 'saytime_weather'
+SaytimeWeather.root = _package
+
 require 'csv'
 require 'uri'
 require 'json'
@@ -17,25 +23,7 @@ require 'optparse'
 require 'tempfile'
 require 'fileutils'
 
-VERSION = '0.0.7'
-TMP_DIR = '/tmp'
-TEMP_FILE = '/tmp/temperature'
-COND_FILE = '/tmp/condition.ulaw'
-TIMEZONE_FILE = '/tmp/timezone'
-WEATHER_SOUND_DIR = '/usr/share/asterisk/sounds/en/wx'
-
-CONFIG_PATH = '/etc/asterisk/local/weather.ini'
-
-HTTP_TIMEOUT_SHORT = 10
-HTTP_TIMEOUT_LONG = 15
 HTTP_BUFFER_SIZE = 8192
-NOMINATIM_DELAY = 1
-
-# Public airport registry (CSV over HTTPS). Refreshed into TMP_DIR periodically.
-# https://ourairports.com/data.html
-AIRPORTS_DATA_URL = 'https://ourairports.com/data/airports.csv'
-AIRPORTS_CACHE_PATH = "#{TMP_DIR}/saytime-weather-ourairports.csv"
-AIRPORTS_CACHE_MAX_AGE = 7 * 24 * 3600 # seconds
 
 class WeatherScript
   attr_reader :options, :config
@@ -52,12 +40,13 @@ class WeatherScript
     @provider_explicitly_set = false
     @airport_iata_map = nil
     parse_options
+    @http = SaytimeWeather::HttpClient.new(warn_proc: ->(m) { warn(m) }, verbose: @options[:verbose])
     load_config
   end
 
   def parse_options
     parser = OptionParser.new do |opts|
-      opts.banner = "weather.rb version #{VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS] location_id [v]\n\n"
+      opts.banner = "weather.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS] location_id [v]\n\n"
       
       opts.on('-c', '--config FILE', 'Use alternate configuration file') do |f|
         @options[:config_file] = f
@@ -85,7 +74,7 @@ class WeatherScript
       end
       
       opts.on('--version', 'Show version information') do
-        puts "weather.rb version #{VERSION}"
+        puts "weather.rb version #{SaytimeWeather::VERSION}"
         exit 0
       end
     end
@@ -94,7 +83,7 @@ class WeatherScript
   end
 
   def show_usage
-    puts "weather.rb version #{VERSION}\n\n"
+    puts "weather.rb version #{SaytimeWeather::VERSION}\n\n"
     puts "Usage: #{File.basename($PROGRAM_NAME)} [OPTIONS] location_id [v]\n\n"
     puts "Arguments:"
     puts "  location_id    Postal code, ZIP code, IATA airport code, or ICAO airport code"
@@ -124,7 +113,7 @@ class WeatherScript
     puts "    #{File.basename($PROGRAM_NAME)} EGLL                     # Heathrow, London"
     puts "    #{File.basename($PROGRAM_NAME)} CYYZ v                   # Toronto Pearson\n\n"
     puts "Configuration File:"
-    puts "  #{CONFIG_PATH}\n\n"
+    puts "  #{SaytimeWeather::Paths.config_path}\n\n"
     puts "Configuration Options:"
     puts "  - Temperature_mode: F/C (set to C for Celsius, F for Fahrenheit)"
     puts "  - process_condition: YES/NO (default: YES)"
@@ -135,12 +124,14 @@ class WeatherScript
     puts "  - show_pressure: YES/NO (default: NO) - Units: inHG (F) or hPa (C)"
     puts "  - show_humidity: YES/NO (default: NO) - Shows relative humidity percentage"
     puts "  - show_zero_precip: YES/NO (default: NO) - Show precipitation even when zero"
-    puts "  - precip_trace_mm: decimal (default: 0.10) - Minimum mm to show precipitation\n\n"
+    puts "  - precip_trace_mm: decimal (default: 0.10) - Minimum mm to show precipitation"
+    puts "  - Optional: http_timeout_short, http_timeout_long, nominatim_delay, http_get_retries,"
+    puts "    http_get_retry_sleep, airports_cache_max_age_seconds, airports_data_url\n\n"
     puts "Note: Command line options override configuration file settings for that run.\n"
   end
 
   def load_config
-    config_path = @options[:config_file] || CONFIG_PATH
+    config_path = @options[:config_file] || SaytimeWeather::Paths.config_path
     
     if @options[:config_file] && !File.exist?(@options[:config_file])
       $stderr.puts "ERROR: Custom config file not found: #{@options[:config_file]}"
@@ -183,6 +174,21 @@ class WeatherScript
     @config['process_condition'] = 'NO' if @options[:no_condition]
     
     validate_config
+    apply_network_settings
+  end
+
+  def apply_network_settings
+    n = SaytimeWeather::Network
+    n.timeout_short = @config['http_timeout_short'].to_i if @config['http_timeout_short'].to_s =~ /^\d+$/
+    n.timeout_long = @config['http_timeout_long'].to_i if @config['http_timeout_long'].to_s =~ /^\d+$/
+    n.nominatim_delay = @config['nominatim_delay'].to_i if @config['nominatim_delay'].to_s =~ /^\d+$/
+    n.retries = @config['http_get_retries'].to_i if @config['http_get_retries'].to_s =~ /^\d+$/
+    n.retry_sleep = @config['http_get_retry_sleep'].to_i if @config['http_get_retry_sleep'].to_s =~ /^\d+$/
+    if @config['airports_cache_max_age_seconds'].to_s =~ /^\d+$/
+      n.airports_cache_max_age = @config['airports_cache_max_age_seconds'].to_i
+    end
+    url = @config['airports_data_url'].to_s.strip
+    n.airports_data_url = url unless url.empty?
   end
 
   def create_default_config(config_path)
@@ -199,6 +205,14 @@ class WeatherScript
       show_humidity = NO
       show_zero_precip = NO
       precip_trace_mm = 0.10
+      ; Optional network tuning (defaults shown; uncomment to override)
+      ; http_timeout_short = 10
+      ; http_timeout_long = 15
+      ; nominatim_delay = 1
+      ; http_get_retries = 3
+      ; http_get_retry_sleep = 1
+      ; airports_cache_max_age_seconds = 604800
+      ; airports_data_url = https://ourairports.com/data/airports.csv
     CONFIG
     File.write(config_path, default_config)
     File.chmod(0o644, config_path)
@@ -219,6 +233,7 @@ class WeatherScript
   end
 
   def run
+    @http.verbose = @options[:verbose]
     location = ARGV[0]
     display_only = ARGV[1]
     
@@ -473,7 +488,7 @@ class WeatherScript
     if temp_value >= tmin && temp_value <= tmax
       begin
         # Round temperature to match display (not truncate)
-        File.write(TEMP_FILE, temp_value.round.to_s)
+        File.write(temp_path('temperature'), temp_value.round.to_s)
       rescue => e
         warn("Error writing temperature file: #{e.message}")
       end
@@ -486,7 +501,7 @@ class WeatherScript
   end
 
   def cleanup_old_files
-    [TEMP_FILE, COND_FILE, TIMEZONE_FILE].each do |file|
+    [temp_path('temperature'), temp_path('condition.ulaw'), temp_path('timezone')].each do |file|
       if File.exist?(file)
         File.unlink(file) rescue nil
       end
@@ -494,7 +509,7 @@ class WeatherScript
   end
 
   def process_weather_condition(condition_text)
-    return unless Dir.exist?(WEATHER_SOUND_DIR)
+    return unless Dir.exist?(weather_sound_dir)
     
     condition_lower = condition_text.downcase
     condition_files = []
@@ -511,7 +526,7 @@ class WeatherScript
     
     # Try full condition text variations
     [condition_lower, condition_lower.gsub(/\s+/, '-'), condition_lower.gsub(/\s+/, '_'), condition_lower.gsub(/\s+/, '')].each do |variant|
-      file = "#{WEATHER_SOUND_DIR}/#{variant}.ulaw"
+      file = "#{weather_sound_dir}/#{variant}.ulaw"
       if File.exist?(file)
         condition_files << file
         break
@@ -522,7 +537,7 @@ class WeatherScript
     if condition_files.empty?
       words = condition_lower.split(/\s+/).reject(&:empty?)
       words.each do |word|
-        file = "#{WEATHER_SOUND_DIR}/#{word}.ulaw"
+        file = "#{weather_sound_dir}/#{word}.ulaw"
         if File.exist?(file)
           condition_files << file
         end
@@ -533,7 +548,7 @@ class WeatherScript
     if condition_files.empty?
       words = condition_lower.split(/\s+/).reject(&:empty?)
       sorted_words = words.sort_by { |w| important_words.include?(w) ? 0 : (modifiers.include?(w) ? 1 : 2) }
-      Dir.glob("#{WEATHER_SOUND_DIR}/*.ulaw").each do |file|
+      Dir.glob("#{weather_sound_dir}/*.ulaw").each do |file|
         filename = File.basename(file, '.ulaw').downcase
         sorted_words.each do |word|
           if filename == word || (filename.include?(word) && word.length >= 4)
@@ -547,12 +562,12 @@ class WeatherScript
     
     # Try defaults if no match found
     if condition_files.empty?
-      %w[clear sunny fair].find { |d| File.exist?(file = "#{WEATHER_SOUND_DIR}/#{d}.ulaw") && condition_files << file }
+      %w[clear sunny fair].find { |d| File.exist?(file = "#{weather_sound_dir}/#{d}.ulaw") && condition_files << file }
     end
     
     # Write condition sound file
     if condition_files.any?
-      File.open(COND_FILE, 'wb') do |out|
+      File.open(temp_path('condition.ulaw'), 'wb') do |out|
         condition_files.each do |file|
           if File.exist?(file)
             File.open(file, 'rb') do |in_file|
@@ -565,7 +580,7 @@ class WeatherScript
       end
     else
       warn("No weather condition sound files found for: #{condition_text}", true)
-      warn("  Expected sound directory: #{WEATHER_SOUND_DIR}", true)
+      warn("  Expected sound directory: #{weather_sound_dir}", true)
       warn("  Hint: Install weather sound files or disable condition announcements", true)
     end
   end
@@ -593,70 +608,12 @@ class WeatherScript
     $stderr.puts "ERROR: #{msg}"
   end
 
-  HTTP_GET_RETRIES = 3
-  HTTP_GET_RETRY_SLEEP = 1
-
-  def http_get(url, timeout = HTTP_TIMEOUT_SHORT, user_agent = nil, max_redirects = 5)
-    return nil if max_redirects <= 0
-
-    HTTP_GET_RETRIES.times do |attempt|
-      result = http_get_once(url, timeout, user_agent, max_redirects)
-      return result if result
-      next if attempt == HTTP_GET_RETRIES - 1
-      sleep(HTTP_GET_RETRY_SLEEP)
-    end
-    nil
+  def temp_path(name)
+    File.join(SaytimeWeather::Paths.tmp_dir, name)
   end
 
-  def http_get_once(url, timeout, user_agent, max_redirects)
-    uri = URI(url)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = uri.scheme == 'https'
-    http.open_timeout = timeout
-    http.read_timeout = timeout
-
-    request = Net::HTTP::Get.new(uri)
-    request['User-Agent'] = user_agent || 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
-
-    response = http.request(request)
-    response_code = response.code.to_i
-
-    case response_code
-    when 200
-      response.body
-    when 301, 302, 303, 307, 308
-      location = response['Location'] || response['location']
-      if location
-        begin
-          redirect_uri = URI(location)
-          redirect_uri = uri + redirect_uri if redirect_uri.relative?
-          return http_get(redirect_uri.to_s, timeout, user_agent, max_redirects - 1)
-        rescue => e
-          warn("Failed to follow redirect: #{e.message}") if @options[:verbose]
-        end
-      end
-      nil
-    when 429
-      warn("Rate limited by server, please wait before retrying") if @options[:verbose]
-      nil
-    when 404
-      nil
-    else
-      warn("HTTP error #{response_code} from #{uri.host}") if @options[:verbose]
-      nil
-    end
-  rescue URI::InvalidURIError => e
-    warn("Invalid URL: #{url}") if @options[:verbose]
-    nil
-  rescue Net::OpenTimeout, Net::ReadTimeout => e
-    warn("Request timeout for #{url}") if @options[:verbose]
-    nil
-  rescue Socket::ResolutionError => e
-    warn("DNS resolution failed for #{uri.host}: #{e.message}") if @options[:verbose]
-    nil
-  rescue => e
-    warn("HTTP request failed: #{e.message}") if @options[:verbose]
-    nil
+  def weather_sound_dir
+    SaytimeWeather::Paths.weather_sound_dir
   end
 
   def safe_decode_json(content)
@@ -677,26 +634,29 @@ class WeatherScript
   end
 
   def refresh_airports_cache_if_stale
-    stale = !File.exist?(AIRPORTS_CACHE_PATH) ||
-            (Time.now - File.mtime(AIRPORTS_CACHE_PATH)) > AIRPORTS_CACHE_MAX_AGE
+    cache = SaytimeWeather::Paths.airports_cache_path
+    max_age = SaytimeWeather::Network.airports_cache_max_age
+    stale = !File.exist?(cache) || (Time.now - File.mtime(cache)) > max_age
     return unless stale
 
-    body = http_get(AIRPORTS_DATA_URL, HTTP_TIMEOUT_LONG, 'Mozilla/5.0 (compatible; WeatherBot/1.0)')
+    body = @http.get(SaytimeWeather::Network.airports_data_url, SaytimeWeather::Network.timeout_long,
+                   SaytimeWeather::Endpoints::DEFAULT_HTTP_UA)
     return if body.nil? || body.empty?
 
-    tmp = "#{AIRPORTS_CACHE_PATH}.part"
+    tmp = "#{cache}.part"
     File.write(tmp, body)
-    File.rename(tmp, AIRPORTS_CACHE_PATH)
+    File.rename(tmp, cache)
   rescue => e
     warn("Airports data download failed: #{e.message}") if @options[:verbose]
   end
 
   def build_airport_iata_map
     refresh_airports_cache_if_stale
-    return {} unless File.exist?(AIRPORTS_CACHE_PATH)
+    cache = SaytimeWeather::Paths.airports_cache_path
+    return {} unless File.exist?(cache)
 
     map = {}
-    CSV.foreach(AIRPORTS_CACHE_PATH, headers: true) do |row|
+    CSV.foreach(cache, headers: true) do |row|
       iata = row['iata_code']&.strip&.upcase
       next unless iata && iata.length == 3 && iata.match?(/\A[A-Z]{3}\z/)
 
@@ -732,16 +692,13 @@ class WeatherScript
 
   def fetch_metar_weather(icao)
     icao = icao.upcase
-    
-    # Try NOAA Aviation Weather API
-    url = "https://aviationweather.gov/api/data/metar?ids=#{URI.encode_www_form_component(icao)}&format=raw&hours=0&taf=false"
-    metar = http_get(url, HTTP_TIMEOUT_LONG)
+    tlong = SaytimeWeather::Network.timeout_long
+
+    metar = @http.get(SaytimeWeather::Endpoints.aviation_metar_url(icao), tlong)
     metar = metar.strip if metar
-    
-    # Fallback to NWS
+
     unless metar && !metar.empty?
-      url = "https://tgftp.nws.noaa.gov/data/observations/metar/stations/#{icao}.TXT"
-      response = http_get(url, HTTP_TIMEOUT_LONG)
+      response = @http.get(SaytimeWeather::Endpoints.noaa_metar_file_url(icao), tlong)
       if response
         lines = response.split("\n")
         metar = lines[1].strip if lines.length > 1
@@ -786,107 +743,46 @@ class WeatherScript
     'Clear'
   end
 
+  def special_locations_table
+    @special_locations_table ||= load_special_locations_json
+  end
+
+  def load_special_locations_json
+    path = SaytimeWeather::Paths.special_locations_file
+    return {} unless File.exist?(path)
+
+    raw = JSON.parse(File.read(path))
+    out = {}
+    raw.each do |k, v|
+      next unless k.is_a?(String) && v.is_a?(Array) && v.length >= 2
+
+      out[k.upcase.gsub(/[^A-Z0-9]/, '')] = [v[0].to_f, v[1].to_f]
+    end
+    out
+  rescue => e
+    warn("Failed to load special_locations.json: #{e.message}")
+    {}
+  end
+
   def postal_to_coordinates(postal)
-    # Special locations (Antarctica, Arctic, remote islands, DXpedition sites)
-    special_locations = {
-      # Antarctica
-      'SOUTHPOLE' => [-90.0, 0.0],
-      'MCMURDO' => [-77.85, 166.67],
-      'PALMER' => [-64.77, -64.05],
-      'VOSTOK' => [-78.46, 106.84],
-      'CASEY' => [-66.28, 110.53],
-      'MAWSON' => [-67.60, 62.87],
-      'DAVIS' => [-68.58, 77.97],
-      'SCOTTBASE' => [-77.85, 166.76],
-      'SYOWA' => [-69.00, 39.58],
-      'CONCORDIA' => [-75.10, 123.33],
-      'HALLEY' => [-75.58, -26.66],
-      'DUMONT' => [-66.66, 140.01],
-      'SANAE' => [-71.67, -2.84],
-      # Arctic
-      'ALERT' => [82.50, -62.35],
-      'EUREKA' => [79.99, -85.93],
-      'THULE' => [76.53, -68.70],
-      'LONGYEARBYEN' => [78.22, 15.65],
-      'BARROW' => [71.29, -156.79],
-      'RESOLUTE' => [74.72, -94.83],
-      'GRISE' => [76.42, -82.90],
-      # Remote Islands (DXpedition Sites)
-      'ASCENSION' => [-7.95, -14.36],
-      'STHELENA' => [-15.97, -5.72],
-      'TRISTAN' => [-37.11, -12.28],
-      'BOUVET' => [-54.42, 3.38],
-      'HEARD' => [-53.10, 73.51],
-      'KERGUELEN' => [-49.35, 70.22],
-      'CROZET' => [-46.43, 51.86],
-      'AMSTERDAM' => [-37.83, 77.57],
-      'MACQUARIE' => [-54.62, 158.86],
-      # Pacific Islands
-      'MIDWAY' => [28.21, -177.38],
-      'WAKE' => [19.28, 166.65],
-      'JOHNSTON' => [16.73, -169.53],
-      'PALMYRA' => [5.89, -162.08],
-      'JARVIS' => [-0.37, -159.99],
-      'HOWLAND' => [0.81, -176.62],
-      'BAKER' => [0.19, -176.48],
-      'KINGMAN' => [6.38, -162.42],
-      # Indian Ocean
-      'DIEGO' => [-7.26, 72.40],
-      'CHAGOS' => [-7.26, 72.40],
-      'COCOS' => [-12.19, 96.83],
-      'CHRISTMAS' => [-10.49, 105.62],
-      # South Atlantic
-      'FALKLANDS' => [-51.70, -59.52],
-      'SOUTHGEORGIA' => [-54.28, -36.51],
-      'SOUTHSANDWICH' => [-59.43, -26.35],
-      # Pacific Polynesia
-      'MARQUESAS' => [-9.00, -140.00],
-      'EASTER' => [-27.11, -109.36],
-      'PITCAIRN' => [-25.07, -130.10],
-      'CLIPPERTON' => [10.30, -109.22],
-      'GALAPAGOS' => [-0.95, -90.97],
-      # Mountain Observatories
-      'MAUNA' => [19.54, -155.58],
-      'JUNGFRAUJOCH' => [46.55, 7.98],
-      # Extreme Deserts
-      'MCMURDODRY' => [-77.85, 163.00],
-      'ATACAMA' => [-24.50, -69.25],
-      # Other Notable Remote Locations
-      'GOUGH' => [-40.35, -9.88],
-      'MARION' => [-46.88, 37.86],
-      'PRINCE' => [-46.77, 37.86],
-      'CAMPBELL' => [-52.55, 169.15],
-      'AUCKLAND' => [-50.73, 166.09],
-      'KERMADEC' => [-29.25, -177.92],
-      'CHATHAM' => [-43.95, -176.55]
-    }
-    
     postal_uc = postal.upcase.gsub(/[^A-Z0-9]/, '')
-    
-    if special_locations[postal_uc]
-      lat, lon = special_locations[postal_uc]
-      return [lat, lon]
+    if (coords = special_locations_table[postal_uc])
+      return coords
     end
-    
-    # Use Nominatim for regular postal codes
-    # Respect Nominatim rate limits (1 request per second recommended)
-    sleep(NOMINATIM_DELAY) if NOMINATIM_DELAY > 0
-    
-    country = ''
-    url = nil
-    
-    if postal =~ /^\d{5}$/
-      country = @config['default_country'].downcase
-      url = "https://nominatim.openstreetmap.org/search?postalcode=#{URI.encode_www_form_component(postal)}&country=#{country}&format=json&limit=1"
-    elsif postal =~ /^([A-Z]\d[A-Z])\s?\d[A-Z]\d$/i
-      country = 'ca'
-      normalized = postal.upcase.gsub(/\s+/, '').sub(/^([A-Z]\d[A-Z])(\d[A-Z]\d)$/, '\1 \2')
-      url = "https://nominatim.openstreetmap.org/search?postalcode=#{URI.encode_www_form_component(normalized)}&country=#{country}&format=json&limit=1"
-    else
-      url = "https://nominatim.openstreetmap.org/search?postalcode=#{URI.encode_www_form_component(postal)}&format=json&limit=1"
-    end
-    
-    response = http_get(url, HTTP_TIMEOUT_SHORT)
+
+    ndelay = SaytimeWeather::Network.nominatim_delay
+    sleep(ndelay) if ndelay > 0
+
+    url = if postal =~ /^\d{5}$/
+            SaytimeWeather::Endpoints.nominatim_postal_url(postal, country: @config['default_country'].downcase)
+          elsif postal =~ /^([A-Z]\d[A-Z])\s?\d[A-Z]\d$/i
+            normalized = postal.upcase.gsub(/\s+/, '').sub(/^([A-Z]\d[A-Z])(\d[A-Z]\d)$/, '\1 \2')
+            SaytimeWeather::Endpoints.nominatim_postal_url(normalized, country: 'ca')
+          else
+            SaytimeWeather::Endpoints.nominatim_postal_url(postal)
+          end
+
+    response = @http.get(url, SaytimeWeather::Network.timeout_short)
     return nil unless response
     
     data = safe_decode_json(response)
@@ -918,12 +814,8 @@ class WeatherScript
       current_params += ",relative_humidity_2m" if @config['show_humidity'] == 'YES'
     end
     
-    url = "https://api.open-meteo.com/v1/forecast?" +
-          "latitude=#{lat}&longitude=#{lon}&" +
-          "current=#{current_params}&" +
-          "temperature_unit=fahrenheit&wind_speed_unit=ms&precipitation_unit=mm&timezone=auto"
-    
-    response = http_get(url, HTTP_TIMEOUT_LONG)
+    url = SaytimeWeather::Endpoints.open_meteo_url(lat, lon, current_params)
+    response = @http.get(url, SaytimeWeather::Network.timeout_long)
     return nil unless response
     
     data = safe_decode_json(response)
@@ -961,7 +853,7 @@ class WeatherScript
     return unless timezone && !timezone.empty?
     
     begin
-      File.write(TIMEZONE_FILE, timezone)
+      File.write(temp_path('timezone'), timezone)
     rescue => e
       warn("Failed to write timezone file: #{e.message}")
     end
@@ -1047,9 +939,9 @@ class WeatherScript
     # NWS API requires coordinates rounded to 4 decimal places to avoid redirects
     lat_rounded = lat.round(4)
     lon_rounded = lon.round(4)
-    points_url = "https://api.weather.gov/points/#{lat_rounded},#{lon_rounded}"
-    
-    response = http_get(points_url, HTTP_TIMEOUT_LONG, 'WeatherBot/1.0 (saytime-weather@github.com)')
+    points_url = SaytimeWeather::Endpoints.nws_points_url(lat_rounded, lon_rounded)
+    nws_ua = SaytimeWeather::Endpoints::NWS_API_UA
+    response = @http.get(points_url, SaytimeWeather::Network.timeout_long, nws_ua)
     return nil unless response
     
     points_data = safe_decode_json(response)
@@ -1070,7 +962,7 @@ class WeatherScript
     
     if observation_stations_url
       # Get list of observation stations
-      response = http_get(observation_stations_url, HTTP_TIMEOUT_LONG, 'WeatherBot/1.0 (saytime-weather@github.com)')
+      response = @http.get(observation_stations_url, SaytimeWeather::Network.timeout_long, nws_ua)
       if response
         stations_data = safe_decode_json(response)
         if stations_data && stations_data['features'] && stations_data['features'].any?
@@ -1080,8 +972,8 @@ class WeatherScript
             next unless station_id
             
             # Get latest observation from this station
-            obs_url = "https://api.weather.gov/stations/#{station_id}/observations/latest"
-            response = http_get(obs_url, HTTP_TIMEOUT_LONG, 'WeatherBot/1.0 (saytime-weather@github.com)')
+            obs_url = SaytimeWeather::Endpoints.nws_station_observation_url(station_id)
+            response = @http.get(obs_url, SaytimeWeather::Network.timeout_long, nws_ua)
             next unless response
             
             obs_data = safe_decode_json(response)
@@ -1202,7 +1094,7 @@ class WeatherScript
     unless temp && condition
       forecast_url = points_data['properties']['forecast']
       if forecast_url
-        response = http_get(forecast_url, HTTP_TIMEOUT_LONG, 'WeatherBot/1.0 (saytime-weather@github.com)')
+        response = @http.get(forecast_url, SaytimeWeather::Network.timeout_long, nws_ua)
         if response
           forecast_data = safe_decode_json(response)
           if forecast_data && forecast_data['properties']

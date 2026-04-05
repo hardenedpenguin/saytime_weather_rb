@@ -2,6 +2,17 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.8] - 2026-04-05
+
+### Added
+- **`lib/saytime_weather/`**: shared `VERSION`, `Paths` (env-tunable dirs), `Endpoints` (API base URLs), `Network` (timeouts, retries, airports CSV settings), `HttpClient` (retries, errors).
+- **`data/special_locations.json`**: named polar/remote locations for coordinate lookup.
+- Optional **`weather.ini`** keys: `http_timeout_short`, `http_timeout_long`, `nominatim_delay`, `http_get_retries`, `http_get_retry_sleep`, `airports_cache_max_age_seconds`, `airports_data_url`.
+- Environment variables: `SAYTIME_TMP`, `WEATHER_CONFIG`, `SAYTIME_SOUND_ROOT`, `ASTERISK_BIN`.
+
+### Changed
+- Debian package ships `lib/` and `data/` under `/usr/share/saytime-weather-rb/`; scripts load library from there when installed to `/usr/sbin/`.
+
 ## [0.0.7] - 2026-02-20
 
 ### Added
@@ -44,6 +55,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.8]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.4...v0.0.5

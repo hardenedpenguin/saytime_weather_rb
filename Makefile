@@ -23,6 +23,12 @@ test:
 	@echo "Running basic syntax checks..."
 	ruby -c weather.rb
 	ruby -c saytime.rb
+	ruby -c lib/saytime_weather.rb
+	ruby -c lib/saytime_weather/version.rb
+	ruby -c lib/saytime_weather/paths.rb
+	ruby -c lib/saytime_weather/network.rb
+	ruby -c lib/saytime_weather/endpoints.rb
+	ruby -c lib/saytime_weather/http_client.rb
 	@echo "Syntax checks passed!"
 
 .DEFAULT_GOAL := build

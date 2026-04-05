@@ -1,3 +1,9 @@
 weather.rb usr/share/saytime-weather-rb/
 saytime.rb usr/share/saytime-weather-rb/
-
+lib/saytime_weather.rb usr/share/saytime-weather-rb/lib/
+lib/saytime_weather/version.rb usr/share/saytime-weather-rb/lib/saytime_weather/
+lib/saytime_weather/paths.rb usr/share/saytime-weather-rb/lib/saytime_weather/
+lib/saytime_weather/network.rb usr/share/saytime-weather-rb/lib/saytime_weather/
+lib/saytime_weather/endpoints.rb usr/share/saytime-weather-rb/lib/saytime_weather/
+lib/saytime_weather/http_client.rb usr/share/saytime-weather-rb/lib/saytime_weather/
+data/special_locations.json usr/share/saytime-weather-rb/data/

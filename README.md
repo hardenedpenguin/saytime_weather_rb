@@ -12,12 +12,29 @@ A Ruby implementation of a time and weather announcement system for Asterisk PBX
 - Asterisk PBX (tested with versions 16+)
 - Internet connection for weather API access
 
+## Layout (source and Debian package)
+
+- **`weather.rb`**, **`saytime.rb`** — entry scripts (`/usr/sbin/` when installed).
+- **`lib/saytime_weather/`** — shared code: version, paths, HTTP client, API URL helpers, tunable network defaults.
+- **`data/special_locations.json`** — named remote / polar / island coordinates for postal-style lookups (`/usr/share/saytime-weather-rb/data/` when installed).
+
+Optional **environment variables** (defaults suit ASL3 / typical Linux installs):
+
+| Variable | Purpose |
+|----------|---------|
+| `SAYTIME_TMP` | Directory for temperature/timezone scratch files (default `/tmp`) |
+| `WEATHER_CONFIG` | Path to `weather.ini` (default `/etc/asterisk/local/weather.ini`) |
+| `SAYTIME_SOUND_ROOT` | Base Asterisk English sounds directory (default `/usr/share/asterisk/sounds/en`) |
+| `ASTERISK_BIN` | Asterisk binary for playback (default `/usr/sbin/asterisk`) |
+
+Optional **`weather.ini`** keys under `[weather]` for HTTP behavior: `http_timeout_short`, `http_timeout_long`, `nominatim_delay`, `http_get_retries`, `http_get_retry_sleep`, `airports_cache_max_age_seconds`, `airports_data_url`. See the commented block in the default config under `/usr/share/saytime-weather-rb/weather.ini`.
+
 ## Installation
 
 ```bash
 cd /tmp
-wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.7/saytime-weather-rb_0.0.7-1_all.deb
-sudo apt install ./saytime-weather-rb_0.0.7-1_all.deb
+wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.8/saytime-weather-rb_0.0.8-1_all.deb
+sudo apt install ./saytime-weather-rb_0.0.8-1_all.deb
 ```
 
 ## Upgrading

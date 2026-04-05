@@ -8,13 +8,18 @@
 # - Optionally announces weather conditions
 # - Combines sound files and plays via Asterisk
 
+_saytime_entry = File.realpath(__FILE__)
+_saytime_root = File.dirname(_saytime_entry)
+_package = File.directory?(File.join(_saytime_root, 'lib', 'saytime_weather')) ? _saytime_root : File.expand_path('../share/saytime-weather-rb', _saytime_root)
+_lib = File.join(_package, 'lib')
+$LOAD_PATH.unshift(_lib) unless $LOAD_PATH.include?(_lib)
+require 'saytime_weather'
+SaytimeWeather.root = _package
+
 require 'optparse'
 require 'fileutils'
 require 'time'
 
-VERSION = '0.0.7'
-TMP_DIR = '/tmp'
-BASE_SOUND_DIR = '/usr/share/asterisk/sounds/en'
 WEATHER_SCRIPT = File.join(File.dirname(__FILE__), 'weather.rb')
 DEFAULT_VERBOSE = false
 DEFAULT_DRY_RUN = false
@@ -22,7 +27,6 @@ DEFAULT_TEST_MODE = false
 DEFAULT_WEATHER_ENABLED = true
 DEFAULT_24HOUR = false
 DEFAULT_GREETING = true
-ASTERISK_BIN = '/usr/sbin/asterisk'
 DEFAULT_PLAY_METHOD = 'localplay'
 PLAY_DELAY = 5
 FILE_BUFFER_SIZE = 8192
@@ -54,7 +58,7 @@ class SaytimeScript
 
   def parse_options
     parser = OptionParser.new do |opts|
-      opts.banner = "saytime.rb version #{VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
+      opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
       
       opts.on('-l', '--location_id=ID', 'Location ID for weather (required when weather enabled)') do |id|
         @options[:location_id] = id
@@ -129,7 +133,7 @@ class SaytimeScript
   end
 
   def show_usage
-    puts "saytime.rb version #{VERSION}\n\n"
+    puts "saytime.rb version #{SaytimeWeather::VERSION}\n\n"
     puts "Usage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
     puts "Options:"
     puts "  -l, --location_id=ID    Location ID for weather (default: none)"
@@ -148,7 +152,7 @@ class SaytimeScript
     puts "      --no-greeting       Disable greeting messages"
     puts "  -m, --method=METHOD     Playback method: localplay or playback (default: localplay)"
     puts "      --sound-dir=DIR     Use custom sound directory"
-    puts "                          (default: /usr/share/asterisk/sounds/en)"
+    puts "                          (default: #{SaytimeWeather::Paths.asterisk_sounds_en})"
     puts "      --log=FILE          Log to specified file (default: none)"
     puts "      --help              Show this help message and exit\n\n"
     puts "Location ID: Any postal code worldwide"
@@ -165,7 +169,7 @@ class SaytimeScript
   end
 
   def load_config
-    config_file = '/etc/asterisk/local/weather.ini'
+    config_file = SaytimeWeather::Paths.config_path
     if File.exist?(config_file)
       begin
         ini = parse_ini_file(config_file)
@@ -309,7 +313,7 @@ class SaytimeScript
 
   def process_time(now, use_24hour)
     files = []
-    sound_dir = @options[:custom_sound_dir] || BASE_SOUND_DIR
+    sound_dir = @options[:custom_sound_dir] || SaytimeWeather::Paths.asterisk_sounds_en
     @missing_files = 0
     
     if @options[:greeting_enabled]
@@ -400,7 +404,7 @@ class SaytimeScript
     
     temp_file = tmp_file('temperature')
     weather_condition_file = tmp_file('condition.ulaw')
-    sound_dir = @options[:custom_sound_dir] || BASE_SOUND_DIR
+    sound_dir = @options[:custom_sound_dir] || SaytimeWeather::Paths.asterisk_sounds_en
     
     files = ''
     if File.exist?(temp_file)
@@ -557,7 +561,7 @@ class SaytimeScript
     
     asterisk_cmd = "rpt #{@options[:play_method]} #{node} #{asterisk_file}"
     
-    result = system(ASTERISK_BIN, '-rx', asterisk_cmd)
+    result = system(SaytimeWeather::Paths.asterisk_bin, '-rx', asterisk_cmd)
     unless result
       exit_code = $?.exitstatus || -1
       error("Failed to play announcement:")
@@ -572,18 +576,12 @@ class SaytimeScript
   end
 
   def tmp_file(name)
-    File.join(TMP_DIR, name)
+    File.join(SaytimeWeather::Paths.tmp_dir, name)
   end
 
   def is_safe_path(file)
     return false if file.include?('..')
-    return true if file.start_with?('/usr/share/asterisk/sounds')
-    return true if file.start_with?('/tmp/')
-    # Allow custom sound directories (validated to exist in validate_options)
-    if @options[:custom_sound_dir] && file.start_with?(@options[:custom_sound_dir])
-      return true
-    end
-    false
+    SaytimeWeather::Paths.sound_path_prefixes(@options[:custom_sound_dir]).any? { |p| file.start_with?(p) }
   end
 
   def cleanup_files(file_to_delete, weather_enabled, silent)
