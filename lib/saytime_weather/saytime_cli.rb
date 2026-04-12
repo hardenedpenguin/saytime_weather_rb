@@ -4,7 +4,23 @@ require 'optparse'
 
 module SaytimeWeather
   module SaytimeCli
+    # Bare `-m` means "use playback"; leave `-m playback` / `-m localplay` as two tokens for OptionParser.
+    def expand_bare_m_flag(argv)
+      i = 0
+      while i < argv.length
+        if argv[i] == '-m'
+          nxt = argv[i + 1]
+          if nxt.nil? || nxt.start_with?('-') || !%w[playback localplay].include?(nxt.downcase)
+            argv[i] = '-mplayback'
+          end
+        end
+        i += 1
+      end
+    end
+
     def parse_options
+      expand_bare_m_flag(ARGV)
+
       parser = OptionParser.new do |opts|
         opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
 
@@ -61,7 +77,8 @@ module SaytimeWeather
           @options[:greeting_enabled] = false
         end
 
-        opts.on('-m', '--method=METHOD', 'Playback method: localplay or playback (default: localplay)') do |method|
+        opts.on('-m METHOD', '-mMETHOD', '--method=METHOD',
+                'Use Asterisk playback (-m alone), or set method to localplay or playback (default: localplay)') do |method|
           @options[:play_method] = method.downcase
         end
 
@@ -97,7 +114,7 @@ module SaytimeWeather
       puts "      --no-weather        Disable weather announcements"
       puts "  -g, --greeting          Enable greeting messages (default: on)"
       puts "      --no-greeting       Disable greeting messages"
-      puts "  -m, --method=METHOD     Playback method: localplay or playback (default: localplay)"
+      puts "  -m, --method=METHOD     Use -m alone for playback, or pass localplay|playback (default: localplay)"
       puts "      --sound-dir=DIR     Use custom sound directory"
       puts "                          (default: #{SaytimeWeather::Paths.asterisk_sounds_en})"
       puts "      --log=FILE          Log to specified file (default: none)"
