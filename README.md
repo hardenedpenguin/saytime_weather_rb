@@ -18,6 +18,17 @@ A Ruby implementation of a time and weather announcement system for Asterisk PBX
 - **`lib/saytime_weather/`** — shared code: version, paths, HTTP client, API URL helpers, tunable network defaults.
 - **`data/special_locations.json`** — named remote / polar / island coordinates for postal-style lookups (`/usr/share/saytime-weather-rb/data/` when installed).
 
+### Source tree vs installed package
+
+`weather.rb` and `saytime.rb` set `SaytimeWeather.root` from the script location so library and data paths stay correct in both layouts:
+
+| Layout | Package root (`SaytimeWeather.root`) | Where `lib/` and `data/` load from |
+|--------|--------------------------------------|-------------------------------------|
+| **Repository** (clone or extract; `lib/saytime_weather/` next to the scripts) | The directory containing the entry script (usually the repo root) | `./lib/` and `./data/` next to `weather.rb` / `saytime.rb` |
+| **Debian `.deb`** (`/usr/sbin/weather.rb`, `/usr/sbin/saytime.rb`) | `/usr/share/saytime-weather-rb/` | `/usr/share/saytime-weather-rb/lib/` and `.../data/`; `/usr/sbin/` holds only the thin wrappers |
+
+You can run `./weather.rb` or `./saytime.rb` from a checkout without installing the package, as long as the usual `lib/` layout is present beside the scripts.
+
 Optional **environment variables** (defaults suit ASL3 / typical Linux installs):
 
 | Variable | Purpose |
