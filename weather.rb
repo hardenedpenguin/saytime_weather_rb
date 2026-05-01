@@ -31,6 +31,9 @@ class WeatherScript
   include SaytimeWeather::WeatherMetar
   include SaytimeWeather::WeatherOpenMeteo
   include SaytimeWeather::WeatherNws
+  include SaytimeWeather::WeatherMetNo
+  include SaytimeWeather::WeatherWttr
+  include SaytimeWeather::Weather7Timer
   include SaytimeWeather::WeatherSound
 
   attr_reader :options, :config
@@ -125,7 +128,7 @@ class WeatherScript
     puts "  - Temperature_mode: F/C (set to C for Celsius, F for Fahrenheit)"
     puts "  - process_condition: YES/NO (default: YES)"
     puts "  - default_country: ISO country code for postal lookups (default: us)"
-    puts "  - weather_provider: openmeteo (worldwide) or nws (US only, default: openmeteo)"
+    puts "  - weather_provider: openmeteo (worldwide), nws (US only), metno (worldwide), wttr (worldwide), 7timer (worldwide)"
     puts "  - show_precipitation: YES/NO (default: NO) - Units: inches (F) or mm (C)"
     puts "  - show_wind: YES/NO (default: NO) - Units: mph (F) or km/h (C)"
     puts "  - show_pressure: YES/NO (default: NO) - Units: inHG (F) or hPa (C)"
@@ -208,18 +211,26 @@ class WeatherScript
               weather_data = fetch_weather_openmeteo(lat, lon)
               provider = 'openmeteo'
             end
-          elsif provider == 'nws'
-            weather_data = fetch_weather_nws(lat, lon)
+          else
+            weather_data =
+              case provider
+              when 'nws'
+                fetch_weather_nws(lat, lon)
+              when 'metno'
+                fetch_weather_metno(lat, lon)
+              when 'wttr'
+                fetch_weather_wttr(lat, lon)
+              when '7timer'
+                fetch_weather_7timer(lat, lon)
+              else
+                provider = 'openmeteo'
+                fetch_weather_openmeteo(lat, lon)
+              end
 
-            unless weather_data && weather_data[:temp] && weather_data[:condition]
+            if provider == 'nws' && !(weather_data && weather_data[:temp] && weather_data[:condition])
               weather_data = fetch_weather_openmeteo(lat, lon)
               provider = 'openmeteo'
-            else
-              w_type = 'nws'
             end
-          else
-            weather_data = fetch_weather_openmeteo(lat, lon)
-            provider = 'openmeteo'
           end
 
           if weather_data && weather_data[:temp] && weather_data[:condition]

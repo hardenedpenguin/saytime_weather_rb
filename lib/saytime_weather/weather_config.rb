@@ -98,7 +98,7 @@ module SaytimeWeather
       end
 
       provider = @config['weather_provider'].to_s.downcase
-      unless %w[openmeteo nws].include?(provider)
+      unless %w[openmeteo nws metno wttr 7timer].include?(provider)
         warn("Invalid weather_provider: #{@config['weather_provider']}, using default (openmeteo)")
         @config['weather_provider'] = 'openmeteo'
       end

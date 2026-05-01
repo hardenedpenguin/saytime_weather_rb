@@ -7,11 +7,15 @@ module SaytimeWeather
     NOMINATIM_SEARCH = 'https://nominatim.openstreetmap.org/search'
     OPEN_METEO_FORECAST = 'https://api.open-meteo.com/v1/forecast'
     NWS_POINTS = 'https://api.weather.gov/points'
+    MET_NO_LOCATIONFORECAST = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
+    WTTR_IN = 'https://wttr.in'
+    SEVENTIMER_API = 'http://www.7timer.info/bin/api.pl'
     AVIATION_METAR = 'https://aviationweather.gov/api/data/metar'
     NOAA_METAR_STATION = 'https://tgftp.nws.noaa.gov/data/observations/metar/stations'
 
     DEFAULT_HTTP_UA = 'Mozilla/5.0 (compatible; WeatherBot/1.0)'
     NWS_API_UA = 'WeatherBot/1.0 (saytime-weather@github.com)'
+    MET_NO_API_UA = 'WeatherBot/1.0 (saytime-weather@github.com)'
 
     def nominatim_postal_url(postal, country: nil)
       q = URI.encode_www_form_component(postal)
@@ -25,6 +29,19 @@ module SaytimeWeather
     def open_meteo_url(lat, lon, current_params)
       "#{OPEN_METEO_FORECAST}?latitude=#{lat}&longitude=#{lon}&current=#{current_params}&" \
         'temperature_unit=fahrenheit&wind_speed_unit=ms&precipitation_unit=mm&timezone=auto'
+    end
+
+    def met_no_compact_url(lat, lon)
+      "#{MET_NO_LOCATIONFORECAST}?lat=#{lat}&lon=#{lon}"
+    end
+
+    def wttr_in_url(query)
+      q = URI.encode_www_form_component(query.to_s)
+      "#{WTTR_IN}/#{q}?format=j1"
+    end
+
+    def seventimer_civil_url(lat, lon)
+      "#{SEVENTIMER_API}?lon=#{lon}&lat=#{lat}&product=civil&output=json"
     end
 
     def nws_points_url(lat, lon)
