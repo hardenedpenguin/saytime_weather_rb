@@ -44,8 +44,8 @@ Optional **`weather.ini`** keys under `[weather]` for HTTP behavior: `http_timeo
 
 ```bash
 cd /tmp
-wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.9/saytime-weather-rb_0.0.9-1_all.deb
-sudo apt install ./saytime-weather-rb_0.0.9-1_all.deb
+wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.10/saytime-weather-rb_0.0.10-1_all.deb
+sudo apt install ./saytime-weather-rb_0.0.10-1_all.deb
 ```
 
 ## Upgrading
