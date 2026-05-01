@@ -92,7 +92,12 @@ precip_trace_mm = 0.10
 - **Temperature_mode**: `F` for Fahrenheit or `C` for Celsius (default: `F`)
 - **process_condition**: `YES` to process weather conditions, `NO` to skip (default: `YES`)
 - **default_country**: ISO country code for postal code lookups (default: `us`)
-- **weather_provider**: `openmeteo` for worldwide or `nws` for US only (default: `openmeteo`)
+- **weather_provider** (default: `openmeteo`):
+  - `openmeteo`: worldwide, no API key
+  - `nws`: US-only, no API key (falls back to `openmeteo` if unavailable / non-US)
+  - `metno`: worldwide, no API key (MET Norway / Yr)
+  - `wttr`: worldwide, no API key (wttr.in)
+  - `7timer`: worldwide, no API key (7Timer!)
 
 ### Additional Weather Data
 
