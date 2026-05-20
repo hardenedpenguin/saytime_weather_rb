@@ -2,6 +2,11 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.12] - 2026-05-19
+
+### Fixed
+- **saytime.rb**: Resolve `hours.ulaw`, `hundred.ulaw`, and `a-m`/`p-m` from `en/` or `digits/` (fixes missing-file warnings on stock Asterisk sound layouts).
+
 ## [0.0.11] - 2026-05-19
 
 ### Added
@@ -94,6 +99,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.12]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.10...v0.0.11
 [0.0.9]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.8...v0.0.9
 [0.0.10]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.9...v0.0.10

@@ -76,12 +76,12 @@ module SaytimeWeather
         files << format_number(hour, sound_dir)
 
         if minute == 0
-          files << add_sound_file("#{sound_dir}/digits/hundred.ulaw")
-          files << add_sound_file("#{sound_dir}/digits/hours.ulaw")
+          files << add_sound_file(sound_path(sound_dir, 'hundred.ulaw'))
+          files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
         else
           files << add_sound_file("#{sound_dir}/digits/0.ulaw") if minute < 10
           files << format_number(minute, sound_dir)
-          files << add_sound_file("#{sound_dir}/digits/hours.ulaw")
+          files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
         end
       else
         display_hour = (hour == 0 || hour == 12) ? 12 : (hour > 12 ? hour - 12 : hour)
@@ -95,7 +95,7 @@ module SaytimeWeather
           files << format_number(minute, sound_dir)
         end
         am_pm = hour < 12 ? 'a-m' : 'p-m'
-        files << add_sound_file("#{sound_dir}/digits/#{am_pm}.ulaw")
+        files << add_sound_file(sound_path(sound_dir, "#{am_pm}.ulaw"))
       end
 
       warn("#{@missing_files} sound file(s) missing. Run with -v for details.") if @missing_files > 0 && !@options[:verbose]
@@ -112,7 +112,7 @@ module SaytimeWeather
       if abs_num >= 100
         hundreds = abs_num / 100
         files += "#{sound_dir}/digits/#{hundreds}.ulaw "
-        files += "#{sound_dir}/digits/hundred.ulaw "
+        files += "#{sound_path(sound_dir, 'hundred.ulaw')} "
         abs_num %= 100
         return files if abs_num == 0
       end
@@ -127,6 +127,15 @@ module SaytimeWeather
       end
 
       files
+    end
+
+    # Asterisk packs some words under digits/; others (hours, hundred, a-m) live in en/.
+    def sound_path(sound_dir, name)
+      candidates = [
+        File.join(sound_dir, 'digits', name),
+        File.join(sound_dir, name)
+      ]
+      candidates.find { |p| File.exist?(p) } || candidates.last
     end
 
     def add_sound_file(file)
