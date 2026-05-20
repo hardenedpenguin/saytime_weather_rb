@@ -2,6 +2,28 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.11] - 2026-05-19
+
+### Added
+- **`SaytimeWeather.run_weather`**: in-process weather API (used by `saytime.rb` by default).
+- **`lib/saytime_weather/weather_script.rb`**: `WeatherScript` class (shared by CLI and library).
+- **`lib/saytime_weather/weather_conditions.rb`**: shared condition normalization.
+- **Airport timezone**: IATA/ICAO lookups write timezone via Our Airports coordinates + Open-Meteo.
+- **Airport supplemental data**: `show_*` options merge Open-Meteo fields when METAR is used.
+- **Unit tests** (`test/all.rb`) and `make test-unit` in CI.
+- **saytime.rb**: `-c/--config`, `--weather-subprocess`; forwards `-v`, config, and `weather.ini` settings to weather.
+
+### Fixed
+- METAR **Light Rain** parsing (`-RA` no longer classified as generic Rain).
+- US auto-NWS only when `weather_provider` is unset/default `openmeteo` (explicit `metno`/`wttr`/`7timer` respected).
+- **silent=2** skips building time sound files.
+- HTTP warnings always logged to stderr; 7Timer API uses HTTPS.
+- NWS observation loop capped at 5 stations.
+
+### Changed
+- `weather.rb` is a thin wrapper; weather modules load via `weather_entry.rb` without saytime stack.
+- `Makefile` syntax-checks metno, wttr, 7timer, and new library files.
+
 ## [0.0.9] - 2026-04-06
 
 ### Added
@@ -72,6 +94,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.11]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.10...v0.0.11
 [0.0.9]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.8...v0.0.9
 [0.0.10]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.9...v0.0.10
 [0.0.8]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.7...v0.0.8

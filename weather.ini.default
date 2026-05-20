@@ -60,6 +60,9 @@ weather_provider = openmeteo
 ; ADDITIONAL WEATHER DATA
 ; ============================================================================
 
+; Postal codes: data from weather_provider. Airport IATA/ICAO: METAR for temp/condition;
+; show_* extras and timezone use Our Airports coordinates + Open-Meteo when available.
+
 ; Show precipitation in weather output
 ; Units are automatically selected based on Temperature_mode:
 ;   F mode: inches (in)

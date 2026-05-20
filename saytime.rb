@@ -42,7 +42,9 @@ class SaytimeScript
       custom_sound_dir: nil,
       log_file: nil,
       play_method: SaytimeWeather::SAYTIME_DEFAULT_PLAY_METHOD,
-      default_country: nil
+      default_country: nil,
+      config_file: nil,
+      weather_subprocess: false
     }
     @config = {}
     @critical_error = false
@@ -58,7 +60,12 @@ class SaytimeScript
 
     now = get_current_time(@options[:location_id])
 
-    time_sound_files = process_time(now, @options[:use_24hour])
+    time_sound_files =
+      if @options[:silent] == 2
+        ''
+      else
+        process_time(now, @options[:use_24hour])
+      end
 
     output_file = tmp_file('current-time.ulaw')
     final_sound_files = combine_sound_files(time_sound_files, weather_sound_files)

@@ -37,21 +37,7 @@ module SaytimeWeather
     end
 
     def parse_metar_condition(metar)
-      return 'Thunderstorm' if metar =~ /\bTS\b/
-      return 'Heavy Rain' if metar =~ /\+RA\b/
-      return 'Rain' if metar =~ /(-|VC)?RA\b/
-      return 'Light Rain' if metar =~ /-RA\b/
-      return 'Drizzle' if metar =~ /DZ\b/
-      return 'Snow' if metar =~ /SN\b/
-      return 'Sleet' if metar =~ /PL\b/
-      return 'Hail' if metar =~ /GR\b/
-      return 'Foggy' if metar =~ /\bFG\b/
-      return 'Mist' if metar =~ /BR\b/
-      return 'Overcast' if metar =~ /\bOVC\d{3}\b/
-      return 'Cloudy' if metar =~ /\bBKN\d{3}\b/
-      return 'Partly Cloudy' if metar =~ /\bSCT\d{3}\b/
-      return 'Clear' if metar =~ /\b(FEW\d{3}|CLR|SKC)\b/
-      'Clear'
+      SaytimeWeather::WeatherConditions.from_metar(metar)
     end
   end
 end

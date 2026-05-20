@@ -88,9 +88,8 @@ module SaytimeWeather
     private
 
     def w(msg)
-      return unless @verbose && @warn_proc
-
-      @warn_proc.call(msg)
+      $stderr.puts "WARNING: #{msg}"
+      @warn_proc.call(msg) if @verbose && @warn_proc
     end
   end
 end

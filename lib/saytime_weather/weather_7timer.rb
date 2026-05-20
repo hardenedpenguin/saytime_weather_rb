@@ -57,22 +57,7 @@ module SaytimeWeather
     end
 
     def seventimer_weather_to_condition(code)
-      return nil unless code
-
-      c = code.to_s.downcase
-      return 'Thunderstorm' if c.start_with?('ts')
-      return 'Sleet' if c.include?('rainsnow')
-      return 'Light Rain' if c.start_with?('lightrain') || c.start_with?('oshower') || c.start_with?('ishower')
-      return 'Rain' if c.start_with?('rain')
-      return 'Light Snow' if c.start_with?('lightsnow')
-      return 'Snow' if c.start_with?('snow')
-      return 'Foggy' if c.start_with?('humid')
-      return 'Overcast' if c.start_with?('cloudy')
-      return 'Cloudy' if c.start_with?('mcloudy')
-      return 'Partly Cloudy' if c.start_with?('pcloudy')
-      return 'Clear' if c.start_with?('clear')
-
-      nil
+      SaytimeWeather::WeatherConditions.from_seventimer(code)
     end
 
     def seventimer_wind_dir_to_degrees(dir)

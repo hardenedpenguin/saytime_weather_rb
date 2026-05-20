@@ -2,6 +2,8 @@
 
 module SaytimeWeather
   module WeatherNws
+    NWS_MAX_STATIONS = 5
+
     def fetch_weather_nws(lat, lon)
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 
@@ -36,7 +38,7 @@ module SaytimeWeather
         if response
           stations_data = safe_decode_json(response)
           if stations_data && stations_data['features'] && stations_data['features'].any?
-            stations_data['features'].each do |station|
+            stations_data['features'].first(NWS_MAX_STATIONS).each do |station|
               station_id = station['properties']['stationIdentifier']
               next unless station_id
 
@@ -182,24 +184,7 @@ module SaytimeWeather
     end
 
     def parse_nws_condition(text)
-      text = text.downcase
-      return 'Thunderstorm' if text =~ /thunderstorm|thunder|t-storm/
-      return 'Heavy Rain' if text =~ /heavy.*rain|rain.*heavy|torrential/
-      return 'Heavy Snow' if text =~ /heavy.*snow|snow.*heavy/
-      return 'Light Rain' if text =~ /light.*rain|rain.*light|drizzle/
-      return 'Light Snow' if text =~ /light.*snow|snow.*light|flurries/
-      return 'Rain' if text =~ /\brain\b/
-      return 'Snow' if text =~ /\bsnow\b/
-      return 'Sleet' if text =~ /sleet|freezing.*rain|ice.*pellets/
-      return 'Hail' if text =~ /\bhail\b/
-      return 'Foggy' if text =~ /\bfog\b|\bmist\b/
-      return 'Overcast' if text =~ /overcast|cloudy.*cloudy/
-      return 'Cloudy' if text =~ /\bcloudy\b/
-      return 'Partly Cloudy' if text =~ /partly.*cloud|partly.*sun|mostly.*cloud/
-      return 'Mostly Sunny' if text =~ /mostly.*sun|mostly.*clear/
-      return 'Sunny' if text =~ /\bsunny\b|clear.*sun|sun.*clear/
-      return 'Clear' if text =~ /\bclear\b/
-      'Clear'
+      SaytimeWeather::WeatherConditions.from_text(text)
     end
   end
 end

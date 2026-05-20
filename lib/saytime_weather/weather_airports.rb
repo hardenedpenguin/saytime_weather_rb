@@ -26,29 +26,49 @@ module SaytimeWeather
       warn("Airports data download failed: #{e.message}") if @options[:verbose]
     end
 
-    def build_airport_iata_map
+    def ensure_airports_loaded
+      return if @airports_loaded
+
+      @airport_iata_map, @airport_icao_coords = load_airports_csv_from_disk
+      @airports_loaded = true
+    end
+
+    def load_airports_csv_from_disk
       refresh_airports_cache_if_stale
       cache = SaytimeWeather::Paths.airports_cache_path
-      return {} unless File.exist?(cache)
+      return [{}, {}] unless File.exist?(cache)
 
-      map = {}
+      iata_map = {}
+      icao_coords = {}
       CSV.foreach(cache, headers: true) do |row|
-        iata = row['iata_code']&.strip&.upcase
-        next unless iata && iata.length == 3 && iata.match?(/\A[A-Z]{3}\z/)
-
         icao = row['icao_code']&.strip&.upcase
         next if icao.nil? || icao.empty?
 
-        map[iata] = icao
+        lat = row['latitude_deg']&.to_f
+        lon = row['longitude_deg']&.to_f
+        if lat && lon && lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0
+          icao_coords[icao] = [lat, lon]
+        end
+
+        iata = row['iata_code']&.strip&.upcase
+        next unless iata && iata.length == 3 && iata.match?(/\A[A-Z]{3}\z/)
+
+        iata_map[iata] = icao
       end
-      map
+      [iata_map, icao_coords]
     rescue => e
       warn("Failed to parse airports data: #{e.message}") if @options[:verbose]
-      {}
+      [{}, {}]
     end
 
     def airport_iata_to_icao_map
-      @airport_iata_map ||= build_airport_iata_map
+      ensure_airports_loaded
+      @airport_iata_map
+    end
+
+    def airport_coordinates(icao)
+      ensure_airports_loaded
+      @airport_icao_coords[icao.to_s.upcase]
     end
 
     def iata_to_icao(iata)

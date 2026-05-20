@@ -16,3 +16,6 @@ jobs:
 
       - name: Syntax checks
         run: make test
+
+      - name: Unit tests
+        run: make test-unit

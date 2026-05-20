@@ -101,7 +101,9 @@ precip_trace_mm = 0.10
 
 ### Additional Weather Data
 
-The following options control display of additional weather information. Units are automatically selected based on `Temperature_mode`:
+The following options control display of additional weather information. Units are automatically selected based on `Temperature_mode`.
+
+For **postal codes**, data comes from your configured weather provider. For **airport codes (IATA/ICAO)**, temperature and condition come from METAR; when any `show_*` option is `YES`, supplemental fields and timezone are filled from Open-Meteo using coordinates from the Our Airports database (when available).
 
 - **show_precipitation**: `YES` to show precipitation (default: `NO`)
   - F mode: inches (in)
@@ -173,9 +175,11 @@ TZ=UTC /usr/sbin/saytime.rb -l 75001 -n 123456 --no-weather  # UTC time
 
 Required: `-l, --location_id=ID`, `-n, --node_number=NUM`
 
-Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-v, --verbose`, `--dry-run`, `--no-weather`
+Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FILE`, `-v, --verbose`, `--dry-run`, `--no-weather`, `--weather-subprocess`
 
-**Important:** The `-l, --location_id` option is a `saytime.rb` option (not a `weather.rb` option). When you specify `-l <location>`, `saytime.rb` automatically passes this location to `weather.rb` internally. The `-d, --default-country` option is passed through from `saytime.rb` to `weather.rb` when calling the weather script. You cannot use `-l` directly with `weather.rb` - it only accepts location as a positional argument.
+**Important:** The `-l, --location_id` option is a `saytime.rb` option (not a `weather.rb` option). When you specify `-l <location>`, `saytime.rb` runs weather retrieval **in-process** by default (faster than spawning `weather.rb`). Use `--weather-subprocess` for the legacy subprocess behavior. Options `-d`, `-c`, `-v`, and settings from `weather.ini` are passed through automatically. You cannot use `-l` directly with `weather.rb` — it only accepts location as a positional argument.
+
+**Programmatic API:** `SaytimeWeather.run_weather(location, verbose: true, default_country: 'us')` returns `true`/`false` (see `lib/saytime_weather/weather_runner.rb`).
 
 **12-hour format:** Times like 2:06 are announced as "two oh six" using `letters/o.ulaw` when present, otherwise the digit zero is used.
 
@@ -185,11 +189,11 @@ Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-v, --verbose`,
 |-----------|------------------------|
 | **`TZ` is set** (e.g. `TZ=UTC`, `TZ=Europe/London`) | Time in that timezone. `TZ` overrides everything. |
 | **Weather on, location = postal code**, weather ran successfully | Time in the **location’s timezone** (from Open-Meteo or NWS; written to `/tmp/timezone` by `weather.rb`). |
-| **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK) | **System local time.** METAR/aviation APIs do not provide timezone, so no timezone file is written. |
+| **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK) | **Airport timezone** when Our Airports has coordinates (via Open-Meteo); otherwise **system local time**. |
 | **`--no-weather`** | **System local time** (weather is not run, so no location timezone is available). |
 | **Weather on but no valid timezone** (e.g. weather failed, or timezone file missing/invalid) | **System local time** (fallback). |
 
-Summary: **Timezone is used** only when (1) you set `TZ`, or (2) weather is enabled, you pass a **postal code** (or location that resolves to coordinates), and `weather.rb` successfully gets weather from Open-Meteo or NWS and writes a timezone. **ICAO/IATA (airport codes) use system local time** because METAR does not supply timezone. All other cases announce **system local time**.
+Summary: **Timezone is used** when (1) you set `TZ`, or (2) weather succeeds and a timezone file is written (postal codes via Open-Meteo/NWS; airport codes via Our Airports + Open-Meteo when coordinates are known). Otherwise **system local time** is announced.
 
 Run with `--help` for complete option list.
 

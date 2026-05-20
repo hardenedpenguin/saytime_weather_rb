@@ -57,6 +57,14 @@ module SaytimeWeather
           @options[:default_country] = cc
         end
 
+        opts.on('-c', '--config FILE', 'Path to weather.ini (passed to weather.rb)') do |f|
+          @options[:config_file] = f
+        end
+
+        opts.on('--weather-subprocess', 'Run weather.rb as a subprocess instead of in-process') do
+          @options[:weather_subprocess] = true
+        end
+
         opts.on('-t', '--test', 'Log playback command instead of executing') do
           @options[:test_mode] = true
         end
@@ -109,6 +117,8 @@ module SaytimeWeather
       puts "  -v, --verbose           Enable verbose output (default: off)"
       puts "      --dry-run            Don't actually play or save files (default: off)"
       puts "  -d, --default-country CC Override default country for weather (us, ca, fr, de, uk, etc.)"
+      puts "  -c, --config FILE       Path to weather.ini for weather lookups"
+      puts "      --weather-subprocess Run weather.rb as subprocess (default: in-process)"
       puts "  -t, --test              Log playback command instead of executing (default: off)"
       puts "  -w, --weather           Enable weather announcements (default: on)"
       puts "      --no-weather        Disable weather announcements"

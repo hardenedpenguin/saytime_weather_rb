@@ -63,39 +63,39 @@ module SaytimeWeather
                    else
                      'evening'
                    end
-        files << add_sound_file("#{sound_dir}/rpt/good#{greeting}.ulaw", @missing_files)
+        files << add_sound_file("#{sound_dir}/rpt/good#{greeting}.ulaw")
       end
 
-      files << add_sound_file("#{sound_dir}/rpt/thetimeis.ulaw", @missing_files)
+      files << add_sound_file("#{sound_dir}/rpt/thetimeis.ulaw")
 
       hour = now.hour
       minute = now.min
 
       if use_24hour
-        files << add_sound_file("#{sound_dir}/digits/0.ulaw", @missing_files) if hour < 10
+        files << add_sound_file("#{sound_dir}/digits/0.ulaw") if hour < 10
         files << format_number(hour, sound_dir)
 
         if minute == 0
-          files << add_sound_file("#{sound_dir}/digits/hundred.ulaw", @missing_files)
-          files << add_sound_file("#{sound_dir}/hours.ulaw", @missing_files)
+          files << add_sound_file("#{sound_dir}/digits/hundred.ulaw")
+          files << add_sound_file("#{sound_dir}/digits/hours.ulaw")
         else
-          files << add_sound_file("#{sound_dir}/digits/0.ulaw", @missing_files) if minute < 10
+          files << add_sound_file("#{sound_dir}/digits/0.ulaw") if minute < 10
           files << format_number(minute, sound_dir)
-          files << add_sound_file("#{sound_dir}/hours.ulaw", @missing_files)
+          files << add_sound_file("#{sound_dir}/digits/hours.ulaw")
         end
       else
         display_hour = (hour == 0 || hour == 12) ? 12 : (hour > 12 ? hour - 12 : hour)
-        files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw", @missing_files)
+        files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw")
 
         if minute != 0
           if minute < 10
             o_file = "#{sound_dir}/letters/o.ulaw"
-            files << add_sound_file(File.exist?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw", @missing_files)
+            files << add_sound_file(File.exist?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
           end
           files << format_number(minute, sound_dir)
         end
         am_pm = hour < 12 ? 'a-m' : 'p-m'
-        files << add_sound_file("#{sound_dir}/digits/#{am_pm}.ulaw", 0)
+        files << add_sound_file("#{sound_dir}/digits/#{am_pm}.ulaw")
       end
 
       warn("#{@missing_files} sound file(s) missing. Run with -v for details.") if @missing_files > 0 && !@options[:verbose]
@@ -129,18 +129,16 @@ module SaytimeWeather
       files
     end
 
-    def add_sound_file(file, missing_count)
-      if File.exist?(file)
-        "#{file} "
-      else
+    def add_sound_file(file)
+      unless File.exist?(file)
         @missing_files = (@missing_files || 0) + 1
         if @options[:verbose]
           warn("Sound file not found: #{file}")
           warn("  Expected location: #{file}")
           warn("  Check that sound files are installed correctly")
         end
-        "#{file} "
       end
+      "#{file} "
     end
   end
 end

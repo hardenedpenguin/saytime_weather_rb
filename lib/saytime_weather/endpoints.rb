@@ -9,7 +9,7 @@ module SaytimeWeather
     NWS_POINTS = 'https://api.weather.gov/points'
     MET_NO_LOCATIONFORECAST = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
     WTTR_IN = 'https://wttr.in'
-    SEVENTIMER_API = 'http://www.7timer.info/bin/api.pl'
+    SEVENTIMER_API = 'https://www.7timer.info/bin/api.pl'
     AVIATION_METAR = 'https://aviationweather.gov/api/data/metar'
     NOAA_METAR_STATION = 'https://tgftp.nws.noaa.gov/data/observations/metar/stations'
 

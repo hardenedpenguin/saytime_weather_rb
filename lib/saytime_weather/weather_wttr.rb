@@ -76,10 +76,7 @@ module SaytimeWeather
     end
 
     def wttr_text_to_condition(text)
-      return nil unless text && !text.to_s.empty?
-
-      # Reuse the NWS text parser semantics where possible to keep conditions consistent.
-      parse_nws_condition(text)
+      SaytimeWeather::WeatherConditions.from_text(text)
     end
   end
 end

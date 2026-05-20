@@ -2,6 +2,19 @@
 
 module SaytimeWeather
   module WeatherOpenMeteo
+    def fetch_timezone_openmeteo(lat, lon)
+      return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+
+      url = SaytimeWeather::Endpoints.open_meteo_url(lat, lon, 'temperature_2m')
+      response = @http.get(url, SaytimeWeather::Network.timeout_long)
+      return nil unless response
+
+      data = safe_decode_json(response)
+      timezone = data && data['timezone']
+      write_timezone_file(timezone) if timezone && !timezone.empty?
+      timezone
+    end
+
     def fetch_weather_openmeteo(lat, lon)
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 

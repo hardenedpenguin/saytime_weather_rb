@@ -1,6 +1,6 @@
 # Makefile for saytime-weather-rb
 
-.PHONY: build clean install package test
+.PHONY: build clean install package test test-unit
 
 build:
 	@echo "No build step needed - Ruby scripts are interpreted"
@@ -45,8 +45,18 @@ test:
 	ruby -c lib/saytime_weather/weather_metar.rb
 	ruby -c lib/saytime_weather/weather_open_meteo.rb
 	ruby -c lib/saytime_weather/weather_nws.rb
+	ruby -c lib/saytime_weather/weather_metno.rb
+	ruby -c lib/saytime_weather/weather_wttr.rb
+	ruby -c lib/saytime_weather/weather_7timer.rb
+	ruby -c lib/saytime_weather/weather_conditions.rb
+	ruby -c lib/saytime_weather/weather_script.rb
+	ruby -c lib/saytime_weather/weather_runner.rb
+	ruby -c lib/saytime_weather/weather_entry.rb
 	ruby -c lib/saytime_weather/weather_sound.rb
 	@echo "Syntax checks passed!"
+
+test-unit:
+	ruby test/all.rb
 
 .DEFAULT_GOAL := build
 

@@ -25,7 +25,7 @@ module SaytimeWeather
     def wind_direction_to_cardinal(degrees)
       return nil unless degrees && degrees.is_a?(Numeric)
       directions = %w[N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW]
-      index = ((degrees + 11.25) / 22.5).round % 16
+      index = ((degrees + 11.25) / 22.5).to_i % 16
       directions[index]
     end
   end

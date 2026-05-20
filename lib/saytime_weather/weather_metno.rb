@@ -66,25 +66,7 @@ module SaytimeWeather
     end
 
     def metno_symbol_to_text(symbol_code)
-      return nil unless symbol_code && !symbol_code.to_s.empty?
-
-      s = symbol_code.to_s.downcase
-      return 'Thunderstorm' if s.include?('thunder')
-      return 'Sleet' if s.include?('sleet')
-      return 'Foggy' if s.include?('fog')
-      return 'Heavy Snow' if s.include?('heavysnow')
-      return 'Light Snow' if s.include?('lightsnow')
-      return 'Snow' if s.include?('snow')
-      return 'Heavy Rain' if s.include?('heavyrain')
-      return 'Light Rain' if s.include?('lightrain')
-      return 'Rain' if s.include?('rain')
-      return 'Overcast' if s.include?('overcast')
-      return 'Cloudy' if s.include?('cloudy')
-      return 'Partly Cloudy' if s.include?('partlycloudy')
-      return 'Mostly Sunny' if s.include?('fair')
-      return 'Clear' if s.include?('clearsky')
-
-      nil
+      SaytimeWeather::WeatherConditions.from_metno_symbol(symbol_code)
     end
   end
 end

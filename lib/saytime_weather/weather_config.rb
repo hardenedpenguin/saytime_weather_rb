@@ -71,12 +71,15 @@ module SaytimeWeather
         process_condition = YES
         default_country = us
         weather_provider = openmeteo
+        ; Providers: openmeteo, nws (US), metno, wttr, 7timer
+        ; US postal codes without weather_provider set use NWS then Open-Meteo.
         show_precipitation = NO
         show_wind = NO
         show_pressure = NO
         show_humidity = NO
         show_zero_precip = NO
         precip_trace_mm = 0.10
+        ; show_* options apply to postal-code lookups; airport METAR adds extras when enabled.
         ; Optional network tuning (defaults shown; uncomment to override)
         ; http_timeout_short = 10
         ; http_timeout_long = 15
