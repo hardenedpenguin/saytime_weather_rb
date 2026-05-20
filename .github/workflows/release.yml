@@ -1,7 +1,7 @@
 # Build .deb and attach to GitHub Release when a version tag is pushed.
 # Then update README on main so the install command points at the new release.
-# Usage: update debian/changelog and VERSION in scripts, then:
-#   git tag v0.0.7 && git push origin v0.0.7
+# Usage: update lib/saytime_weather/version.rb, CHANGELOG.md, and debian/changelog, then:
+#   git tag v0.0.11 && git push origin v0.0.11
 name: Release
 
 on:
@@ -21,7 +21,18 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential debhelper ruby
+          sudo apt-get install -y build-essential debhelper ruby devscripts
+
+      - name: Verify Debian changelog matches tag
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          EXPECTED="${VERSION}-1"
+          CURRENT=$(dpkg-parsechangelog -SVersion)
+          if [ "$CURRENT" != "$EXPECTED" ]; then
+            echo "::error::debian/changelog is ${CURRENT} but tag ${TAG} requires ${EXPECTED}. Update debian/changelog before tagging."
+            exit 1
+          fi
 
       - name: Build .deb
         run: dpkg-buildpackage -us -uc -b

@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.11-1) unstable; urgency=medium
+
+  * Release 0.0.11: audit fixes, in-process weather API, unit tests, airport timezone
+  * Refactor weather into lib/saytime_weather/weather_script.rb
+  * Fix METAR light rain parsing; respect explicit weather_provider for US locations
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Mon, 19 May 2026 18:00:00 -0500
+
 saytime-weather-rb (0.0.10-1) unstable; urgency=medium
 
   * weather.rb: Add MET Norway (metno), wttr.in (wttr), and 7Timer (7timer) providers
