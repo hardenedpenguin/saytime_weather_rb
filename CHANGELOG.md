@@ -2,6 +2,11 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.13] - 2026-05-19
+
+### Added
+- **`weather_provider_random`**: optional `YES` in `weather.ini` rotates postal-code weather across providers other than `weather_provider`, with fallback on failure (spreads API load).
+
 ## [0.0.12] - 2026-05-19
 
 ### Fixed
@@ -99,6 +104,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.13]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.10...v0.0.11
 [0.0.9]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.8...v0.0.9
