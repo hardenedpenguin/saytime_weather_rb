@@ -15,6 +15,7 @@ class TestRunner
     t.test_weather_conditions_metno
     t.test_ini_parse
     t.test_units
+    load File.expand_path('provider_order_test.rb', __dir__)
     puts "All #{@count} tests passed."
   end
 

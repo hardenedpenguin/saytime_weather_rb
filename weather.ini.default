@@ -56,6 +56,13 @@ default_country = us
 ; Default: openmeteo
 weather_provider = openmeteo
 
+; Rotate postal-code weather across other providers (not weather_provider above)
+; to spread API load. Each run picks a random eligible provider first; your
+; configured provider is tried last. Falls back through the list on failure.
+; Valid values: YES, NO
+; Default: NO
+weather_provider_random = NO
+
 ; ============================================================================
 ; ADDITIONAL WEATHER DATA
 ; ============================================================================

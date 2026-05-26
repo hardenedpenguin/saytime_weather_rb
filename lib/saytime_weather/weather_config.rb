@@ -34,6 +34,7 @@ module SaytimeWeather
       @config['Temperature_mode'] ||= 'F'
       @config['default_country'] ||= 'us'
       @config['weather_provider'] ||= 'openmeteo'
+      @config['weather_provider_random'] ||= 'NO'
       @config['show_precipitation'] ||= 'NO'
       @config['show_wind'] ||= 'NO'
       @config['show_pressure'] ||= 'NO'
@@ -73,6 +74,9 @@ module SaytimeWeather
         weather_provider = openmeteo
         ; Providers: openmeteo, nws (US), metno, wttr, 7timer
         ; US postal codes without weather_provider set use NWS then Open-Meteo.
+        ; weather_provider_random = YES spreads postal-code lookups across other
+        ; providers (not weather_provider), then falls back if one fails.
+        weather_provider_random = NO
         show_precipitation = NO
         show_wind = NO
         show_pressure = NO

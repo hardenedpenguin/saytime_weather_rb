@@ -18,6 +18,7 @@ module SaytimeWeather
     include WeatherWttr
     include Weather7Timer
     include WeatherSound
+    include WeatherProviders
 
     attr_reader :options, :config
 
@@ -154,7 +155,6 @@ module SaytimeWeather
             temperature = weather_data[:temp].to_s
             condition = weather_data[:condition]
             @weather_data = weather_data
-            warn("Weather from #{provider.upcase}") if @options[:verbose]
           else
             report_coordinate_failure(location, lat, lon, provider)
           end
@@ -203,44 +203,6 @@ module SaytimeWeather
 
     def extra_weather_fields_enabled?
       %w[show_precipitation show_wind show_pressure show_humidity].any? { |k| @config[k] == 'YES' }
-    end
-
-    def fetch_coordinate_weather(lat, lon, _location)
-      provider = @config['weather_provider'].to_s.downcase
-      is_us_location = lat >= 18.0 && lat <= 72.0 && lon >= -180.0 && lon <= -50.0
-
-      weather_data =
-        if !@provider_explicitly_set && is_us_location && provider == 'openmeteo'
-          data = fetch_weather_nws(lat, lon)
-          if data && data[:temp] && data[:condition]
-            provider = 'nws'
-            data
-          else
-            provider = 'openmeteo'
-            fetch_weather_openmeteo(lat, lon)
-          end
-        else
-          case provider
-          when 'nws'
-            fetch_weather_nws(lat, lon)
-          when 'metno'
-            fetch_weather_metno(lat, lon)
-          when 'wttr'
-            fetch_weather_wttr(lat, lon)
-          when '7timer'
-            fetch_weather_7timer(lat, lon)
-          else
-            provider = 'openmeteo'
-            fetch_weather_openmeteo(lat, lon)
-          end
-        end
-
-      if provider == 'nws' && !(weather_data && weather_data[:temp] && weather_data[:condition])
-        weather_data = fetch_weather_openmeteo(lat, lon)
-        provider = 'openmeteo'
-      end
-
-      [weather_data, provider]
     end
 
     def report_coordinate_failure(location, lat, lon, provider)

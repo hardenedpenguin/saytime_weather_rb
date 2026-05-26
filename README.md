@@ -98,6 +98,7 @@ precip_trace_mm = 0.10
   - `metno`: worldwide, no API key (MET Norway / Yr)
   - `wttr`: worldwide, no API key (wttr.in)
   - `7timer`: worldwide, no API key (7Timer!)
+- **weather_provider_random**: `YES` to spread postal-code lookups across the other eligible providers (not your `weather_provider`); your configured provider is tried last. `NO` uses only `weather_provider` (default). Does not affect airport METAR lookups.
 
 ### Additional Weather Data
 
