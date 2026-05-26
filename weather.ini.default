@@ -59,6 +59,8 @@ weather_provider = openmeteo
 ; Rotate postal-code weather across other providers (not weather_provider above)
 ; to spread API load. Each run picks a random eligible provider first; your
 ; configured provider is tried last. Falls back through the list on failure.
+; Location timezone for saytime always comes from Open-Meteo when the chosen
+; provider does not supply one (e.g. metno, wttr, 7timer).
 ; Valid values: YES, NO
 ; Default: NO
 weather_provider_random = NO

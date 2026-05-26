@@ -2,6 +2,13 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.14] - 2026-05-19
+
+### Fixed
+- **Non-US locations**: `weather_provider = nws` no longer blocks postal-code weather; Open-Meteo is used instead with proper fallback.
+- **Random providers**: Location timezone for saytime is always written via Open-Meteo when metno, wttr, or 7timer wins (fixes wrong local time announcements).
+- Clearer failure messages listing all providers attempted.
+
 ## [0.0.13] - 2026-05-19
 
 ### Added
@@ -104,6 +111,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.14]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.10...v0.0.11

@@ -206,12 +206,14 @@ module SaytimeWeather
     end
 
     def report_coordinate_failure(location, lat, lon, provider)
-      provider_name = provider.to_s.upcase
-      error("Failed to fetch weather data from #{provider_name}")
+      tried = @last_providers_tried&.map(&:upcase)&.join(', ')
+      error("Failed to fetch weather data#{tried ? " (tried: #{tried})" : ''}")
       error("  Location: #{location}")
       error("  Coordinates: lat=#{lat}, lon=#{lon}")
       error("  Hint: Check internet connectivity and API availability")
-      error("  Note: NWS only supports US locations") if provider == 'nws'
+      if @last_providers_tried&.include?('nws') && !us_coordinates?(lat, lon)
+        error("  Note: NWS only supports US locations; use weather_provider = openmeteo or enable weather_provider_random")
+      end
     end
 
     def build_output_line(temp_f_display, temp_c, condition)

@@ -37,8 +37,16 @@ assert(!order.include?('openmeteo') || order.last == 'openmeteo', 'default openm
 assert(order.first != 'openmeteo', 'random pool should not start with default')
 assert((order & %w[metno wttr 7timer]).any?, 'should include worldwide alternates')
 
-h2 = ProviderOrderHarness.new('weather_provider' => 'openmeteo', 'weather_provider_random' => 'NO')
+h2 = ProviderOrderHarness.new(
+  'weather_provider' => 'openmeteo',
+  'weather_provider_random' => 'NO',
+  explicit_provider: false
+)
 us_order = h2.provider_try_order_fixed(40.0, -75.0)
-assert(us_order == %w[nws openmeteo], 'implicit US default tries NWS first') if !h2.instance_variable_get(:@provider_explicitly_set)
+assert(us_order == %w[nws openmeteo], 'implicit US default tries NWS first')
+
+h3 = ProviderOrderHarness.new('weather_provider' => 'nws', 'weather_provider_random' => 'NO')
+berlin = h3.provider_try_order_fixed(52.52, 13.41)
+assert(berlin == %w[openmeteo], 'nws config outside US should use openmeteo only')
 
 puts 'provider_order_test: ok'
