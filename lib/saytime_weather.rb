@@ -7,6 +7,8 @@ module SaytimeWeather
 end
 
 require_relative 'saytime_weather/constants'
+require_relative 'saytime_weather/cache'
+require_relative 'saytime_weather/gps'
 require_relative 'saytime_weather/ini'
 require_relative 'saytime_weather/version'
 require_relative 'saytime_weather/network'
@@ -33,5 +35,6 @@ require_relative 'saytime_weather/saytime_logging'
 require_relative 'saytime_weather/saytime_config'
 require_relative 'saytime_weather/saytime_cli'
 require_relative 'saytime_weather/saytime_playback'
+require_relative 'saytime_weather/sound_index'
 require_relative 'saytime_weather/saytime_time'
 require_relative 'saytime_weather/saytime_weather_bridge'

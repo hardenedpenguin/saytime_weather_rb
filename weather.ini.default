@@ -44,8 +44,8 @@ default_country = us
 ; WEATHER DATA SOURCE
 ; ============================================================================
 
-; Weather data provider
-;   openmeteo: Free, no API key, worldwide coverage (default)
+; Weather data provider (optional — omit to use provider rotation below)
+;   openmeteo: Free, no API key, worldwide coverage (fallback when unset)
 ;   nws:       Free, no API key, US locations only (official government data)
 ;              Automatically falls back to openmeteo for non-US locations
 ;   metno:     Free, no API key, worldwide coverage (MET Norway / Yr)
@@ -53,17 +53,18 @@ default_country = us
 ;   wttr:      Free, no API key, worldwide coverage (wttr.in)
 ;   7timer:    Free, no API key, worldwide coverage (7Timer!)
 ; Valid values: openmeteo, nws, metno, wttr, 7timer
-; Default: openmeteo
-weather_provider = openmeteo
+; When omitted, Open-Meteo is the fallback tried last during rotation.
+; weather_provider = openmeteo
 
-; Rotate postal-code weather across other providers (not weather_provider above)
-; to spread API load. Each run picks a random eligible provider first; your
-; configured provider is tried last. Falls back through the list on failure.
+; Rotate postal-code weather across eligible providers to spread API load.
+; Each run picks a random provider first; Open-Meteo (or weather_provider above)
+; is tried last. Falls back through the list on failure.
 ; Location timezone for saytime always comes from Open-Meteo when the chosen
 ; provider does not supply one (e.g. metno, wttr, 7timer).
+; Set to NO and set weather_provider to use a single provider only.
 ; Valid values: YES, NO
-; Default: NO
-weather_provider_random = NO
+; Default: YES
+weather_provider_random = YES
 
 ; ============================================================================
 ; ADDITIONAL WEATHER DATA
@@ -113,4 +114,69 @@ show_zero_precip = NO
 ; Valid values: decimal number (e.g., 0.10)
 ; Default: 0.10
 precip_trace_mm = 0.10
+
+; ============================================================================
+; GPS LOCATION (optional)
+; ============================================================================
+
+; Location source: postal (default) or gps
+; When gps, saytime.rb and weather.rb use coordinates from gpsd; -l is optional.
+; An explicit -l on the command line overrides location_source = gps.
+; location_source = postal
+
+; gpsd connection (default: localhost:2947)
+; gpsd_host = 127.0.0.1
+; gpsd_port = 2947
+
+; Minimum fix mode: 2=2D, 3=3D (default: 2)
+; gps_min_mode = 2
+
+; Reject fixes older than this many seconds (default: 300)
+; gps_max_age_seconds = 300
+
+; Decimal places for lat/lon sent to weather APIs (default: 4)
+; gps_coordinate_precision = 4
+
+; Use cached fix up to this many seconds when live GPS fails (default: 86400)
+; gps_fix_cache_max_age_seconds = 86400
+
+; Postal/airport fallback when GPS has no fix (optional)
+; gps_fallback_location = 75001
+
+; Seconds to wait for a GPS fix from gpsd (default: 5)
+; gps_timeout_seconds = 5
+
+; gpspipe samples when using gpspipe fallback (default: 10)
+; gpspipe_samples = 10
+
+; gpspipe fallback: AUTO (try if gpsd socket fails), YES, or NO
+; gps_use_gpspipe = AUTO
+
+; ============================================================================
+; PERFORMANCE AND CACHING
+; ============================================================================
+
+; Seconds to wait after Asterisk playback before exit (default: 5)
+; saytime_play_delay = 5
+
+; HTTP probe timeout for alternate providers in random mode (default: 5)
+; http_probe_timeout = 5
+
+; Max provider attempts in random mode including default (default: 3)
+; weather_provider_random_max_attempts = 3
+
+; Geocode cache TTL in seconds (default: 2592000 = 30 days)
+; geocode_cache_max_age_seconds = 2592000
+
+; Timezone cache TTL in seconds (default: 604800 = 7 days)
+; timezone_cache_max_age_seconds = 604800
+
+; Optional network tuning (defaults shown; uncomment to override)
+; http_timeout_short = 10
+; http_timeout_long = 15
+; nominatim_delay = 1
+; http_get_retries = 3
+; http_get_retry_sleep = 1
+; airports_cache_max_age_seconds = 604800
+; airports_data_url = https://ourairports.com/data/airports.csv
 

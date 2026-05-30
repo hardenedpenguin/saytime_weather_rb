@@ -19,6 +19,7 @@ module SaytimeWeather
     include Weather7Timer
     include WeatherSound
     include WeatherProviders
+    include WeatherGps
 
     attr_reader :options, :config
 
@@ -28,12 +29,14 @@ module SaytimeWeather
         config_file: nil,
         default_country: nil,
         temperature_mode: nil,
-        no_condition: false
+        no_condition: false,
+        use_gps: false
       }
       @config = {}
       @provider_explicitly_set = false
       @airport_iata_map = nil
       @airport_icao_coords = nil
+      @explicit_location = false
 
       if options
         merge_runtime_options(options)
@@ -51,16 +54,18 @@ module SaytimeWeather
       @options[:default_country] = opts[:default_country] if opts[:default_country]
       @options[:temperature_mode] = opts[:temperature_mode].upcase if opts[:temperature_mode]
       @options[:no_condition] = true if opts[:no_condition]
+      @options[:use_gps] = true if opts[:use_gps]
     end
 
     def parse_options
       OptionParser.new do |opts|
-        opts.banner = "weather.rb version #{VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS] location_id [v]\n\n"
+        opts.banner = "weather.rb version #{VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS] [location_id] [v]\n\n"
 
         opts.on('-c', '--config FILE', 'Use alternate configuration file') { |f| @options[:config_file] = f }
         opts.on('-d', '--default-country CC', 'Override default country') { |cc| @options[:default_country] = cc }
         opts.on('-t', '--temperature-mode M', 'Override temperature mode (F or C)') { |m| @options[:temperature_mode] = m.upcase }
         opts.on('--no-condition', 'Skip weather condition announcements') { @options[:no_condition] = true }
+        opts.on('--gps', 'Use GPS coordinates from gpsd (location_id optional)') { @options[:use_gps] = true }
         opts.on('-v', '--verbose', 'Enable verbose output') { @options[:verbose] = true }
         opts.on('-h', '--help', 'Show this help message') { show_usage; exit 0 }
         opts.on('--version', 'Show version information') { puts "weather.rb version #{VERSION}"; exit 0 }
@@ -69,19 +74,21 @@ module SaytimeWeather
 
     def show_usage
       puts "weather.rb version #{VERSION}\n\n"
-      puts "Usage: weather.rb [OPTIONS] location_id [v]\n\n"
+      puts "Usage: weather.rb [OPTIONS] [location_id] [v]\n\n"
       puts "Arguments:"
-      puts "  location_id    Postal code, IATA, or ICAO airport code"
+      puts "  location_id    Postal code, IATA, ICAO, lat,lon coordinates, or omit with --gps"
       puts "  v              Display text only (no sound output)\n\n"
       puts "Options:"
       puts "  -c, --config FILE        Alternate configuration file"
       puts "  -d, --default-country CC Override default country"
       puts "  -t, --temperature-mode M Temperature mode (F or C)"
       puts "  --no-condition           Skip condition sound files"
+      puts "  --gps                    Use GPS via gpsd (see location_source = gps in weather.ini)"
       puts "  -v, --verbose            Verbose output"
       puts "  -h, --help               This help"
       puts "  --version                Version information\n\n"
       puts "Configuration: #{Paths.config_path}\n"
+      puts "GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.\n"
       puts "Note: show_precipitation, show_wind, show_pressure, and show_humidity apply to"
       puts "postal-code lookups only; airport METAR provides temperature and condition.\n"
     end
@@ -89,28 +96,31 @@ module SaytimeWeather
   # Returns true on success, false on failure (does not exit).
   def run(location: nil, display_only: nil)
       @http.verbose = @options[:verbose]
-      location = (location || ARGV[0]).to_s
+      location = (location || ARGV[0]).to_s unless gps_location_enabled?
       display_only = display_only || ARGV[1]
+      @explicit_location = !location.to_s.strip.empty?
 
-      if location.nil? || location.empty?
+      if !gps_location_enabled? && location.empty?
         show_usage
         return :usage
       end
 
-      unless location =~ /^[a-zA-Z0-9\s\-_]+$/
-        error("Invalid location format. Only alphanumeric characters, spaces, hyphens, and underscores are allowed.")
+      unless valid_location_format?(location)
+        error("Invalid location format.")
         error("  Provided: #{location}")
+        error("  Use postal code, airport code, lat,lon coordinates, or --gps")
         return false
       end
 
-      location = location.strip
+      location = location.strip unless location.empty?
       cleanup_old_files
 
       temperature, condition, provider = fetch_weather_for_location(location)
 
       unless temperature && condition
+        label = location_label_for_error(location)
         error("No weather report available")
-        error("  Location: #{location}")
+        error("  Location: #{label}")
         error("  Hint: Check that the location is valid and weather services are accessible")
         return false
       end
@@ -118,7 +128,7 @@ module SaytimeWeather
       temp_f = temperature.to_f
       unless temp_f >= -150.0 && temp_f <= 200.0
         error("Invalid temperature value: #{temp_f}°F")
-        error("  Location: #{location}")
+        error("  Location: #{location_label_for_error(location)}")
         return false
       end
 
@@ -130,43 +140,104 @@ module SaytimeWeather
       write_temperature_file(temp_f, temp_c)
       process_weather_condition(condition) if @config['process_condition'] == 'YES' && condition
       true
+    ensure
+      @http.close if @http
     end
 
     private
 
     def fetch_weather_for_location(location)
       @weather_data = {}
-      temperature = nil
-      condition = nil
-      provider = nil
+      @resolved_metar = nil
 
-      if iata_code?(location)
-        icao = iata_to_icao(location)
-        temperature, condition, provider = fetch_metar_with_extras(icao)
-      elsif icao_code?(location)
-        temperature, condition, provider = fetch_metar_with_extras(location.upcase)
+      if (metar = try_metar_resolution(location))
+        return metar
       end
 
-      unless temperature && condition
-        lat, lon = postal_to_coordinates(location)
-        if lat && lon
-          weather_data, provider = fetch_coordinate_weather(lat, lon, location)
-          if weather_data && weather_data[:temp] && weather_data[:condition]
-            temperature = weather_data[:temp].to_s
-            condition = weather_data[:condition]
-            @weather_data = weather_data
-          else
-            report_coordinate_failure(location, lat, lon, provider)
-          end
-        else
-          error("Could not get coordinates for location: #{location}")
-          error("  Hint: Verify the postal code or location name is correct")
-          error("  For IATA codes (3 letters), ensure the airport code is valid (e.g., JFK, LHR, DFW)")
-          error("  For ICAO codes (4 letters), ensure the airport code is valid (e.g., KJFK, EGLL)")
+      lat, lon, label = resolve_location_coordinates(location)
+      if lat && lon
+        weather_data, provider = fetch_coordinate_weather(lat, lon, label)
+        if weather_data && weather_data[:temp] && weather_data[:condition]
+          return [weather_data[:temp].to_s, weather_data[:condition], provider]
         end
+
+        report_coordinate_failure(label, lat, lon, provider)
+        return [nil, nil, provider]
       end
 
-      [temperature, condition, provider]
+      report_location_resolution_failure(location, label)
+      [nil, nil, nil]
+    end
+
+    def resolve_location_coordinates(location)
+      if gps_location_enabled?
+        fix = read_gps_fix
+        if fix
+          return [fix[:lat], fix[:lon], format_gps_label(fix)]
+        end
+
+        fallback = @config['gps_fallback_location'].to_s.strip
+        unless fallback.empty?
+          warn("GPS fix unavailable, using fallback location: #{fallback}") if @options[:verbose]
+          return resolve_postal_or_airport_coordinates(fallback)
+        end
+
+        return [nil, nil, 'gps']
+      end
+
+      return [nil, nil, nil] if location.nil? || location.to_s.empty?
+
+      resolve_postal_or_airport_coordinates(location)
+    end
+
+    def resolve_postal_or_airport_coordinates(location)
+      location = location.to_s.strip
+
+      if coordinate_literal?(location)
+        coords = parse_coordinate_literal(location)
+        return [coords[0], coords[1], location] if coords
+        return [nil, nil, location]
+      end
+
+      lat, lon = postal_to_coordinates(location)
+      return [lat, lon, location] if lat && lon
+
+      [nil, nil, location]
+    end
+
+    def try_metar_resolution(location)
+      return nil if gps_location_enabled?
+      return nil if location.nil? || location.to_s.empty?
+      return nil if coordinate_literal?(location)
+
+      loc = location.to_s.strip
+      if iata_code?(loc)
+        fetch_metar_with_extras(iata_to_icao(loc))
+      elsif icao_code?(loc)
+        fetch_metar_with_extras(loc.upcase)
+      end
+    end
+
+    def report_location_resolution_failure(location, label)
+      loc = label || location
+      if gps_location_enabled? || loc == 'gps'
+        error('Could not obtain GPS coordinates')
+        error('  Hint: Ensure gpsd is running and the receiver has a fix')
+        error('  Hint: Set gps_fallback_location in weather.ini for indoor use')
+        return
+      end
+
+      error("Could not get coordinates for location: #{loc}")
+      error('  Hint: Verify the postal code or location name is correct')
+      error('  For IATA codes (3 letters), ensure the airport code is valid (e.g., JFK, LHR, DFW)')
+      error('  For ICAO codes (4 letters), ensure the airport code is valid (e.g., KJFK, EGLL)')
+      error('  Coordinates may be passed as lat,lon (e.g., 48.8566,2.3522)')
+    end
+
+    def location_label_for_error(location)
+      return 'gps' if gps_location_enabled? && (location.nil? || location.empty?)
+
+      location.to_s.empty? ? 'unknown' : location
     end
 
     def fetch_metar_with_extras(icao)
@@ -183,10 +254,21 @@ module SaytimeWeather
       return unless coords
 
       lat, lon = coords
-      fetch_timezone_openmeteo(lat, lon)
-      return unless extra_weather_fields_enabled?
-
-      merge_supplemental_fields(fetch_weather_openmeteo(lat, lon))
+      if extra_weather_fields_enabled?
+        supplemental = fetch_openmeteo(lat, lon, include_extras: true)
+        if supplemental
+          write_timezone_file(supplemental[:timezone]) if supplemental[:timezone] && !supplemental[:timezone].empty?
+          write_timezone_cache(lat, lon, supplemental[:timezone]) if supplemental[:timezone] && !supplemental[:timezone].empty?
+          merge_supplemental_fields(supplemental)
+        end
+      else
+        cached = read_timezone_cache(lat, lon)
+        if cached
+          write_timezone_file(cached)
+        else
+          fetch_timezone_openmeteo(lat, lon)
+        end
+      end
     end
 
     def merge_supplemental_fields(supplemental)

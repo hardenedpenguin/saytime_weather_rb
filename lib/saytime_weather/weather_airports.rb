@@ -10,13 +10,13 @@ module SaytimeWeather
     end
 
     def refresh_airports_cache_if_stale
-      cache = SaytimeWeather::Paths.airports_cache_path
-      max_age = SaytimeWeather::Network.airports_cache_max_age
+      cache = Paths.airports_cache_path
+      max_age = Network.airports_cache_max_age
       stale = !File.exist?(cache) || (Time.now - File.mtime(cache)) > max_age
       return unless stale
 
-      body = @http.get(SaytimeWeather::Network.airports_data_url, SaytimeWeather::Network.timeout_long,
-                       SaytimeWeather::Endpoints::DEFAULT_HTTP_UA)
+      body = @http.get(Network.airports_data_url, Network.timeout_long,
+                       Endpoints::DEFAULT_HTTP_UA)
       return if body.nil? || body.empty?
 
       tmp = "#{cache}.part"
@@ -29,15 +29,46 @@ module SaytimeWeather
     def ensure_airports_loaded
       return if @airports_loaded
 
-      @airport_iata_map, @airport_icao_coords = load_airports_csv_from_disk
+      @airport_iata_map, @airport_icao_coords = load_airports_maps
       @airports_loaded = true
     end
 
-    def load_airports_csv_from_disk
+    def load_airports_maps
       refresh_airports_cache_if_stale
-      cache = SaytimeWeather::Paths.airports_cache_path
+      cache = Paths.airports_cache_path
       return [{}, {}] unless File.exist?(cache)
 
+      csv_mtime = File.mtime(cache).to_i
+      if (disk = read_airports_maps_cache(csv_mtime))
+        return disk
+      end
+
+      maps = parse_airports_csv(cache)
+      write_airports_maps_cache(csv_mtime, maps[0], maps[1])
+      maps
+    end
+
+    def read_airports_maps_cache(csv_mtime)
+      data = Cache.read_json(Paths.airports_maps_cache_path, 0)
+      return nil unless data && data['csv_mtime'] == csv_mtime
+      return nil unless data['iata'].is_a?(Hash) && data['icao_coords'].is_a?(Hash)
+
+      [data['iata'], data['icao_coords'].transform_values { |v| v.map(&:to_f) }]
+    rescue
+      nil
+    end
+
+    def write_airports_maps_cache(csv_mtime, iata_map, icao_coords)
+      serializable = {}
+      icao_coords.each { |k, v| serializable[k] = v }
+      Cache.write_json(Paths.airports_maps_cache_path, {
+                         'csv_mtime' => csv_mtime,
+                         'iata' => iata_map,
+                         'icao_coords' => serializable
+                       })
+    end
+
+    def parse_airports_csv(cache)
       iata_map = {}
       icao_coords = {}
       CSV.foreach(cache, headers: true) do |row|

@@ -3,55 +3,50 @@
 module SaytimeWeather
   module SaytimeTime
     def get_current_time(location_id)
-      timezone = nil
-
-      if ENV['TZ'] && !ENV['TZ'].empty?
-        timezone = ENV['TZ'].strip
-      elsif location_id
-        timezone_file = tmp_file('timezone')
-        if File.exist?(timezone_file)
-          begin
-            timezone = File.read(timezone_file).strip
-          rescue => e
-            # Fall through to system local time
-          end
-        end
-      end
+      timezone = read_location_timezone(location_id)
+      timezone = ENV['TZ'].strip if timezone.to_s.empty? && ENV['TZ'] && !ENV['TZ'].empty?
 
       if timezone && !timezone.empty?
-        begin
-          sanitized_tz = timezone.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
-          if sanitized_tz.empty?
-            # invalid
-          elsif sanitized_tz != timezone
-            # invalid
-          else
-            time_parts = nil
-            IO.popen({ 'TZ' => sanitized_tz }, ['date', '+%H %M %S']) do |io|
-              time_parts = io.read.strip
-            end
-
-            if $?.success? && time_parts && !time_parts.empty?
-              parts = time_parts.split.map(&:to_i)
-              if parts.length >= 2
-                hour, minute, second = parts[0], parts[1], (parts[2] || 0)
-                now = Time.now
-                time = Time.new(now.year, now.month, now.day, hour, minute, second)
-                return time
-              end
-            end
-          end
-        rescue => e
-          # Fall through to system local time
+        sanitized_tz = timezone.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
+        unless sanitized_tz.empty? || sanitized_tz != timezone
+          t = time_in_timezone(sanitized_tz)
+          return t if t
         end
       end
 
       Time.now
     end
 
+    def read_location_timezone(location_id)
+      return nil unless location_id
+
+      timezone_file = tmp_file('timezone')
+      return nil unless File.exist?(timezone_file)
+
+      File.read(timezone_file).strip
+    rescue
+      nil
+    end
+
+    def time_in_timezone(tz)
+      time_parts = nil
+      IO.popen({ 'TZ' => tz }, ['date', '+%Y %m %d %H %M %S']) do |io|
+        time_parts = io.read.strip
+      end
+
+      return nil unless $?.success? && time_parts && !time_parts.empty?
+
+      parts = time_parts.split.map(&:to_i)
+      return nil unless parts.length >= 6
+
+      Time.new(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+    rescue
+      nil
+    end
+
     def process_time(now, use_24hour)
       files = []
-      sound_dir = @options[:custom_sound_dir] || SaytimeWeather::Paths.asterisk_sounds_en
+      sound_dir = @options[:custom_sound_dir] || Paths.asterisk_sounds_en
       @missing_files = 0
 
       if @options[:greeting_enabled]
@@ -88,10 +83,8 @@ module SaytimeWeather
         files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw")
 
         if minute != 0
-          if minute < 10
-            o_file = "#{sound_dir}/letters/o.ulaw"
-            files << add_sound_file(File.exist?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
-          end
+          o_file = sound_path(sound_dir, 'letters/o.ulaw')
+          files << add_sound_file(indexed_file_exists?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
           files << format_number(minute, sound_dir)
         end
         am_pm = hour < 12 ? 'a-m' : 'p-m'
@@ -129,17 +122,21 @@ module SaytimeWeather
       files
     end
 
-    # Asterisk packs some words under digits/; others (hours, hundred, a-m) live in en/.
     def sound_path(sound_dir, name)
       candidates = [
-        File.join(sound_dir, 'digits', name),
-        File.join(sound_dir, name)
+        File.join(sound_dir, name),
+        File.join(sound_dir, 'digits', name)
       ]
-      candidates.find { |p| File.exist?(p) } || candidates.last
+      candidates.find { |p| indexed_file_exists?(p) } || candidates.first
+    end
+
+    def indexed_file_exists?(path)
+      idx = sound_index_for(@options[:custom_sound_dir] || Paths.asterisk_sounds_en)
+      idx['abs_set'][path] || File.exist?(path)
     end
 
     def add_sound_file(file)
-      unless File.exist?(file)
+      unless indexed_file_exists?(file)
         @missing_files = (@missing_files || 0) + 1
         if @options[:verbose]
           warn("Sound file not found: #{file}")

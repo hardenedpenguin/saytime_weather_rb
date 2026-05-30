@@ -25,6 +25,7 @@ class SaytimeScript
   include SaytimeWeather::SaytimePlayback
   include SaytimeWeather::SaytimeTime
   include SaytimeWeather::SaytimeWeatherBridge
+  include SaytimeWeather::SoundIndex
 
   attr_reader :options, :config, :critical_error
 
@@ -44,7 +45,8 @@ class SaytimeScript
       play_method: SaytimeWeather::SAYTIME_DEFAULT_PLAY_METHOD,
       default_country: nil,
       config_file: nil,
-      weather_subprocess: false
+      weather_subprocess: false,
+      use_gps: false
     }
     @config = {}
     @critical_error = false
@@ -58,7 +60,8 @@ class SaytimeScript
 
     weather_sound_files = process_weather(@options[:location_id])
 
-    now = get_current_time(@options[:location_id])
+    time_context = @options[:location_id] || (gps_weather_enabled? ? 'gps' : nil)
+    now = get_current_time(time_context)
 
     time_sound_files =
       if @options[:silent] == 2

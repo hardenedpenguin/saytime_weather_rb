@@ -23,7 +23,6 @@ module SaytimeWeather
     end
 
     def create_output_file(input_files, output_file)
-      buf = SaytimeWeather::HTTP_BUFFER_SIZE
       File.open(output_file, 'wb') do |out|
         files = input_files.split(/\s+/).select { |f| f =~ /\.ulaw$/ }
         files_processed = 0
@@ -37,11 +36,7 @@ module SaytimeWeather
           end
 
           if File.exist?(file)
-            File.open(file, 'rb') do |in_file|
-              while chunk = in_file.read(buf)
-                out.write(chunk)
-              end
-            end
+            File.open(file, 'rb') { |in_file| IO.copy_stream(in_file, out) }
             files_processed += 1
           else
             warn("Sound file not found: #{file}")
@@ -95,7 +90,7 @@ module SaytimeWeather
         error("  Hint: Verify Asterisk is running and node number is correct")
         @critical_error = true
       end
-      sleep SaytimeWeather::SAYTIME_PLAY_DELAY
+      sleep play_delay_seconds
     end
 
     def cleanup_files(file_to_delete, weather_enabled, silent)

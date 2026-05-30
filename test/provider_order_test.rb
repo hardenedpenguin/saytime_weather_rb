@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'saytime_weather/network'
 require 'saytime_weather/weather_providers'
 
 class ProviderOrderHarness
@@ -13,6 +14,7 @@ class ProviderOrderHarness
     @config = config
     @provider_explicitly_set = config.fetch(:explicit_provider, true)
     @options = { verbose: false }
+    SaytimeWeather::Network.reset_defaults!
   end
 
   def fetch_weather_nws(*) = nil
@@ -48,5 +50,15 @@ assert(us_order == %w[nws openmeteo], 'implicit US default tries NWS first')
 h3 = ProviderOrderHarness.new('weather_provider' => 'nws', 'weather_provider_random' => 'NO')
 berlin = h3.provider_try_order_fixed(52.52, 13.41)
 assert(berlin == %w[openmeteo], 'nws config outside US should use openmeteo only')
+
+h4 = ProviderOrderHarness.new(
+  'weather_provider' => 'openmeteo',
+  'weather_provider_random' => 'YES',
+  'weather_provider_random_max_attempts' => '2',
+  explicit_provider: true
+)
+order = h4.provider_try_order_random(52.52, 13.41)
+assert(order.length == 2, 'max attempts 2 should yield one alternate plus default')
+assert(order.last == 'openmeteo', 'default should be last')
 
 puts 'provider_order_test: ok'

@@ -31,20 +31,18 @@ module SaytimeWeather
         words = condition_lower.split(/\s+/).reject(&:empty?)
         words.each do |word|
           file = "#{weather_sound_dir}/#{word}.ulaw"
-          if File.exist?(file)
-            condition_files << file
-          end
+          condition_files << file if File.exist?(file)
         end
       end
 
       if condition_files.empty?
         words = condition_lower.split(/\s+/).reject(&:empty?)
         sorted_words = words.sort_by { |w| important_words.include?(w) ? 0 : (modifiers.include?(w) ? 1 : 2) }
-        Dir.glob("#{weather_sound_dir}/*.ulaw").each do |file|
-          filename = File.basename(file, '.ulaw').downcase
+        wx_names = wx_basenames_for(weather_sound_dir)
+        wx_names.each do |filename|
           sorted_words.each do |word|
             if filename == word || (filename.include?(word) && word.length >= 4)
-              condition_files << file
+              condition_files << "#{weather_sound_dir}/#{filename}.ulaw"
               break
             end
           end
@@ -56,16 +54,14 @@ module SaytimeWeather
         %w[clear sunny fair].find { |d| File.exist?(file = "#{weather_sound_dir}/#{d}.ulaw") && condition_files << file }
       end
 
-      buf = SaytimeWeather::HTTP_BUFFER_SIZE
+      buf = HTTP_BUFFER_SIZE
       if condition_files.any?
         File.open(temp_path('condition.ulaw'), 'wb') do |out|
           condition_files.each do |file|
-            if File.exist?(file)
-              File.open(file, 'rb') do |in_file|
-                while chunk = in_file.read(buf)
-                  out.write(chunk)
-                end
-              end
+            next unless File.exist?(file)
+
+            File.open(file, 'rb') do |in_file|
+              IO.copy_stream(in_file, out)
             end
           end
         end
@@ -74,6 +70,11 @@ module SaytimeWeather
         warn("  Expected sound directory: #{weather_sound_dir}", true)
         warn("  Hint: Install weather sound files or disable condition announcements", true)
       end
+    end
+
+    def wx_basenames_for(wx_dir)
+      @wx_basenames_cache ||= {}
+      @wx_basenames_cache[wx_dir] ||= Dir.glob("#{wx_dir}/*.ulaw").map { |f| File.basename(f, '.ulaw').downcase }
     end
   end
 end

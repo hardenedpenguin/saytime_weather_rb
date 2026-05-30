@@ -2,6 +2,38 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.17] - 2026-05-19
+
+### Added
+- **GPS location**: `location_source = gps` in `weather.ini` or `--gps` on `saytime.rb` / `weather.rb` reads coordinates from **gpsd** (with gpspipe fallback and cached last fix).
+- **Coordinate literals**: `-l 48.8566,2.3522` passes lat/lon directly without geocoding.
+- **`gps_fallback_location`**: optional postal/airport fallback when GPS has no fix.
+- Debian package **Recommends: gpsd**.
+
+### Changed
+- **Default config**: `weather_provider_random = YES`; `weather_provider` omitted by default (Open-Meteo tried last during rotation).
+
+## [0.0.16] - 2026-05-19
+
+### Fixed
+- **saytime timezone**: Location timezone file from weather now takes priority over `ENV['TZ']`; time lookup uses `date` in the target zone (Ruby `Time.now` does not honor runtime `TZ` changes on typical Linux installs).
+
+## [0.0.15] - 2026-05-19
+
+### Added
+- **Geocode cache**: Nominatim results cached on disk (default 30 days) to avoid repeat lookups.
+- **Timezone cache**: Open-Meteo timezone lookups cached (default 7 days).
+- **Airport map cache**: Parsed IATA/ICAO maps persisted between runs.
+- **Sound index**: One-time glob per sound directory for faster existence checks.
+- **HTTP keep-alive**: Reuses connections per host; 404 responses are not retried.
+- **Configurable tuning** in `weather.ini`: `http_probe_timeout`, `geocode_cache_max_age_seconds`, `timezone_cache_max_age_seconds`, `weather_provider_random_max_attempts`, `saytime_play_delay`.
+
+### Changed
+- **Random provider mode**: Shorter probe timeout for alternates; max attempts limit (default 3).
+- **Airport weather**: Single Open-Meteo call for timezone and supplemental extras when enabled.
+- **saytime**: Local time via Ruby `ENV['TZ']` instead of a `date` subprocess.
+- **Playback**: Configurable post-play delay; sound concatenation uses `IO.copy_stream`.
+
 ## [0.0.14] - 2026-05-19
 
 ### Fixed

@@ -32,6 +32,23 @@ module SaytimeWeather
       File.join(tmp_dir, 'saytime-weather-ourairports.csv')
     end
 
+    def geocode_cache_path(key)
+      safe = key.to_s.gsub(/[^a-zA-Z0-9._-]/, '_')
+      File.join(tmp_dir, "saytime-geocode-#{safe}.json")
+    end
+
+    def timezone_cache_path(lat, lon)
+      File.join(tmp_dir, "saytime-timezone-#{lat.round(2)}_#{lon.round(2)}.json")
+    end
+
+    def airports_maps_cache_path
+      File.join(tmp_dir, 'saytime-weather-airports-maps.json')
+    end
+
+    def gps_fix_cache_path
+      File.join(tmp_dir, 'saytime-gps-fix.json')
+    end
+
     def weather_script_path
       File.join(SaytimeWeather.root, 'weather.rb')
     end

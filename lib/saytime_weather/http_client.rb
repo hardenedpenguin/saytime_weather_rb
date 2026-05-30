@@ -6,11 +6,14 @@ require 'uri'
 
 module SaytimeWeather
   class HttpClient
+    NOT_RETRYABLE = :not_retryable
+
     attr_accessor :verbose
 
     def initialize(warn_proc: nil, verbose: false)
       @warn_proc = warn_proc
       @verbose = verbose
+      @connections = {}
     end
 
     def retries
@@ -26,7 +29,8 @@ module SaytimeWeather
 
       retries.times do |attempt|
         result = get_once(url, timeout, user_agent, max_redirects)
-        return result if result
+        return result if result.is_a?(String)
+        break if result == NOT_RETRYABLE
         next if attempt == retries - 1
 
         sleep(retry_sleep)
@@ -34,15 +38,22 @@ module SaytimeWeather
       nil
     end
 
+    def close
+      @connections.each_value do |http|
+        http.finish if http.started?
+      rescue IOError
+        nil
+      end
+      @connections.clear
+    end
+
     def get_once(url, timeout, user_agent, max_redirects)
       uri = URI(url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == 'https'
-      http.open_timeout = timeout
-      http.read_timeout = timeout
+      http = connection_for(uri, timeout)
 
       request = Net::HTTP::Get.new(uri)
       request['User-Agent'] = user_agent || SaytimeWeather::Endpoints::DEFAULT_HTTP_UA
+      request['Connection'] = 'keep-alive'
 
       response = http.request(request)
       response_code = response.code.to_i
@@ -62,10 +73,10 @@ module SaytimeWeather
           end
         end
         nil
+      when 404
+        NOT_RETRYABLE
       when 429
         w('Rate limited by server, please wait before retrying')
-        nil
-      when 404
         nil
       else
         w("HTTP error #{response_code} from #{uri.host}")
@@ -73,7 +84,7 @@ module SaytimeWeather
       end
     rescue URI::InvalidURIError
       w("Invalid URL: #{url}")
-      nil
+      NOT_RETRYABLE
     rescue Net::OpenTimeout, Net::ReadTimeout
       w("Request timeout for #{url}")
       nil
@@ -86,6 +97,22 @@ module SaytimeWeather
     end
 
     private
+
+    def connection_for(uri, timeout)
+      key = "#{uri.scheme}://#{uri.host}:#{uri.port}"
+      http = @connections[key]
+      if http.nil? || !http.started?
+        http&.finish rescue nil
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == 'https'
+        http.keep_alive_timeout = 30
+        http.start
+        @connections[key] = http
+      end
+      http.open_timeout = timeout
+      http.read_timeout = timeout
+      http
+    end
 
     def w(msg)
       $stderr.puts "WARNING: #{msg}"

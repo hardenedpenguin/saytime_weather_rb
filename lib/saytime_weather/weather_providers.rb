@@ -9,6 +9,12 @@ module SaytimeWeather
       @config['weather_provider_random'] == 'YES'
     end
 
+    def random_max_attempts
+      n = Network.random_max_attempts
+      n = @config['weather_provider_random_max_attempts'].to_i if @config['weather_provider_random_max_attempts'].to_s =~ /^\d+$/
+      n
+    end
+
     def us_coordinates?(lat, lon)
       lat >= 18.0 && lat <= 72.0 && lon >= -180.0 && lon <= -50.0
     end
@@ -18,7 +24,6 @@ module SaytimeWeather
       PROVIDERS.include?(provider) ? provider : 'openmeteo'
     end
 
-    # NWS only serves US coordinates; use openmeteo when nws is configured elsewhere.
     def effective_default_provider(lat, lon)
       default = configured_provider
       return 'openmeteo' if default == 'nws' && !us_coordinates?(lat, lon)
@@ -51,26 +56,35 @@ module SaytimeWeather
       data && data[:temp] && data[:condition]
     end
 
-    # metno, wttr, and 7timer do not supply timezone; fill from Open-Meteo when needed.
     def ensure_location_timezone(lat, lon, data)
       tz = data[:timezone].to_s.strip
       if tz.empty?
-        fetch_timezone_openmeteo(lat, lon)
+        cached = read_timezone_cache(lat, lon)
+        if cached
+          write_timezone_file(cached)
+        else
+          fetched = fetch_timezone_openmeteo(lat, lon)
+          write_timezone_cache(lat, lon, fetched) if fetched && !fetched.empty?
+        end
       else
         write_timezone_file(tz)
+        write_timezone_cache(lat, lon, tz)
       end
     end
 
-    # Random mode: try shuffled providers except the configured default, then the rest.
     def provider_try_order_random(lat, lon)
       default = effective_default_provider(lat, lon)
       eligible = eligible_providers(lat, lon)
-      random_first = (eligible - [default]).shuffle
-      remainder = eligible - random_first - [default]
-      sanitize_try_order(random_first + remainder + [default], lat, lon)
+      random_pool = (eligible - [default]).shuffle
+
+      max = random_max_attempts
+      if max > 0
+        random_pool = random_pool.first([max - 1, 0].max)
+      end
+
+      sanitize_try_order(random_pool + [default], lat, lon)
     end
 
-    # Fixed mode: configured provider; legacy US auto-NWS when openmeteo is implicit default.
     def provider_try_order_fixed(lat, lon)
       default = effective_default_provider(lat, lon)
       order =
@@ -95,10 +109,11 @@ module SaytimeWeather
     def fetch_coordinate_weather(lat, lon, _location)
       try_order = provider_try_order(lat, lon)
       @last_providers_tried = []
+      default = effective_default_provider(lat, lon)
 
       try_order.each do |provider|
         @last_providers_tried << provider
-        data = fetch_from_provider(provider, lat, lon)
+        data = fetch_from_provider_with_timeout(provider, lat, lon, default)
         next unless valid_weather_data?(data)
 
         ensure_location_timezone(lat, lon, data)
@@ -111,6 +126,18 @@ module SaytimeWeather
       end
 
       [nil, try_order.last || configured_provider]
+    end
+
+    def fetch_from_provider_with_timeout(provider, lat, lon, default)
+      prev_short = Network.timeout_short
+      prev_long = Network.timeout_long
+      t = provider_random_enabled? && provider != default ? Network.probe_timeout : Network.timeout_long
+      Network.timeout_short = [prev_short, t].min
+      Network.timeout_long = t
+      fetch_from_provider(provider, lat, lon)
+    ensure
+      Network.timeout_short = prev_short
+      Network.timeout_long = prev_long
     end
   end
 end

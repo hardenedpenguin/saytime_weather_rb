@@ -17,6 +17,7 @@ module SaytimeWeather
     opts[:default_country] = options[:default_country] if options[:default_country]
     opts[:temperature_mode] = options[:temperature_mode] if options[:temperature_mode]
     opts[:no_condition] = true if options[:no_condition]
+    opts[:use_gps] = true if options[:use_gps]
     opts
   end
 end

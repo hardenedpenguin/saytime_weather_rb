@@ -1,3 +1,25 @@
+saytime-weather-rb (0.0.17-1) unstable; urgency=medium
+
+  * Performance: geocode/timezone/airport caches, HTTP keep-alive, sound index
+  * Fix saytime location timezone; GPS via gpsd; lat,lon coordinates
+  * Default provider rotation (weather_provider_random=YES); Recommends: gpsd
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 19 May 2026 23:45:00 -0500
+
+saytime-weather-rb (0.0.16-1) unstable; urgency=medium
+
+  * Fix saytime using server local time instead of location timezone file
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 19 May 2026 23:30:00 -0500
+
+saytime-weather-rb (0.0.15-1) unstable; urgency=medium
+
+  * Performance: geocode/timezone/airport caches, HTTP keep-alive, sound index
+  * Random provider probe timeout and max attempts; configurable saytime play delay
+  * saytime: Ruby TZ for local time; IO.copy_stream for sound concat
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 19 May 2026 23:00:00 -0500
+
 saytime-weather-rb (0.0.14-1) unstable; urgency=medium
 
   * Fix NWS config outside US; ensure timezone via Open-Meteo for random providers

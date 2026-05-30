@@ -34,13 +34,14 @@ module SaytimeWeather
       @config['Temperature_mode'] ||= 'F'
       @config['default_country'] ||= 'us'
       @config['weather_provider'] ||= 'openmeteo'
-      @config['weather_provider_random'] ||= 'NO'
+      @config['weather_provider_random'] ||= 'YES'
       @config['show_precipitation'] ||= 'NO'
       @config['show_wind'] ||= 'NO'
       @config['show_pressure'] ||= 'NO'
       @config['show_humidity'] ||= 'NO'
       @config['show_zero_precip'] ||= 'NO'
       @config['precip_trace_mm'] ||= '0.10'
+      @config['location_source'] ||= 'postal'
 
       @config['default_country'] = @options[:default_country] if @options[:default_country]
       @config['Temperature_mode'] = @options[:temperature_mode] if @options[:temperature_mode]
@@ -57,8 +58,18 @@ module SaytimeWeather
       n.nominatim_delay = @config['nominatim_delay'].to_i if @config['nominatim_delay'].to_s =~ /^\d+$/
       n.retries = @config['http_get_retries'].to_i if @config['http_get_retries'].to_s =~ /^\d+$/
       n.retry_sleep = @config['http_get_retry_sleep'].to_i if @config['http_get_retry_sleep'].to_s =~ /^\d+$/
+      n.probe_timeout = @config['http_probe_timeout'].to_i if @config['http_probe_timeout'].to_s =~ /^\d+$/
       if @config['airports_cache_max_age_seconds'].to_s =~ /^\d+$/
         n.airports_cache_max_age = @config['airports_cache_max_age_seconds'].to_i
+      end
+      if @config['geocode_cache_max_age_seconds'].to_s =~ /^\d+$/
+        n.geocode_cache_max_age = @config['geocode_cache_max_age_seconds'].to_i
+      end
+      if @config['timezone_cache_max_age_seconds'].to_s =~ /^\d+$/
+        n.timezone_cache_max_age = @config['timezone_cache_max_age_seconds'].to_i
+      end
+      if @config['weather_provider_random_max_attempts'].to_s =~ /^\d+$/
+        n.random_max_attempts = @config['weather_provider_random_max_attempts'].to_i
       end
       url = @config['airports_data_url'].to_s.strip
       n.airports_data_url = url unless url.empty?
@@ -71,12 +82,11 @@ module SaytimeWeather
         Temperature_mode = F
         process_condition = YES
         default_country = us
-        weather_provider = openmeteo
-        ; Providers: openmeteo, nws (US), metno, wttr, 7timer
-        ; US postal codes without weather_provider set use NWS then Open-Meteo.
-        ; weather_provider_random = YES spreads postal-code lookups across other
-        ; providers (not weather_provider), then falls back if one fails.
-        weather_provider_random = NO
+        ; weather_provider = openmeteo
+        ; Omit weather_provider to rotate across providers (Open-Meteo tried last).
+        ; US postal codes without weather_provider set use NWS then Open-Meteo when
+        ; weather_provider_random = NO.
+        weather_provider_random = YES
         show_precipitation = NO
         show_wind = NO
         show_pressure = NO
@@ -87,9 +97,14 @@ module SaytimeWeather
         ; Optional network tuning (defaults shown; uncomment to override)
         ; http_timeout_short = 10
         ; http_timeout_long = 15
+        ; http_probe_timeout = 5
         ; nominatim_delay = 1
         ; http_get_retries = 3
         ; http_get_retry_sleep = 1
+        ; geocode_cache_max_age_seconds = 2592000
+        ; timezone_cache_max_age_seconds = 604800
+        ; weather_provider_random_max_attempts = 3
+        ; saytime_play_delay = 5
         ; airports_cache_max_age_seconds = 604800
         ; airports_data_url = https://ourairports.com/data/airports.csv
       CONFIG
@@ -108,6 +123,12 @@ module SaytimeWeather
       unless %w[openmeteo nws metno wttr 7timer].include?(provider)
         warn("Invalid weather_provider: #{@config['weather_provider']}, using default (openmeteo)")
         @config['weather_provider'] = 'openmeteo'
+      end
+
+      source = @config['location_source'].to_s.strip.downcase
+      unless %w[postal gps].include?(source)
+        warn("Invalid location_source: #{@config['location_source']}, using default (postal)")
+        @config['location_source'] = 'postal'
       end
     end
   end

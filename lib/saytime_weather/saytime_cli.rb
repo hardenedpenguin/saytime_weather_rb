@@ -24,7 +24,7 @@ module SaytimeWeather
       parser = OptionParser.new do |opts|
         opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
 
-        opts.on('-l', '--location_id=ID', 'Location ID for weather (required when weather enabled)') do |id|
+        opts.on('-l', '--location_id=ID', 'Location ID for weather (optional when GPS enabled)') do |id|
           @options[:location_id] = id
         end
 
@@ -63,6 +63,10 @@ module SaytimeWeather
 
         opts.on('--weather-subprocess', 'Run weather.rb as a subprocess instead of in-process') do
           @options[:weather_subprocess] = true
+        end
+
+        opts.on('--gps', 'Use GPS coordinates from gpsd (location_id optional)') do
+          @options[:use_gps] = true
         end
 
         opts.on('-t', '--test', 'Log playback command instead of executing') do
@@ -108,7 +112,7 @@ module SaytimeWeather
       puts "saytime.rb version #{SaytimeWeather::VERSION}\n\n"
       puts "Usage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
       puts "Options:"
-      puts "  -l, --location_id=ID    Location ID for weather (default: none)"
+      puts "  -l, --location_id=ID    Location ID for weather (optional with --gps or location_source=gps)"
       puts "  -n, --node_number=NUM   Node number for announcement (required)"
       puts "  -s, --silent=NUM        Silent mode (default: 0)"
       puts "                          0=voice, 1=save time+weather, 2=save weather only"
@@ -118,6 +122,7 @@ module SaytimeWeather
       puts "      --dry-run            Don't actually play or save files (default: off)"
       puts "  -d, --default-country CC Override default country for weather (us, ca, fr, de, uk, etc.)"
       puts "  -c, --config FILE       Path to weather.ini for weather lookups"
+      puts "      --gps               Use GPS via gpsd (or set location_source = gps in weather.ini)"
       puts "      --weather-subprocess Run weather.rb as subprocess (default: in-process)"
       puts "  -t, --test              Log playback command instead of executing (default: off)"
       puts "  -w, --weather           Enable weather announcements (default: on)"
@@ -129,9 +134,11 @@ module SaytimeWeather
       puts "                          (default: #{SaytimeWeather::Paths.asterisk_sounds_en})"
       puts "      --log=FILE          Log to specified file (default: none)"
       puts "      --help              Show this help message and exit\n\n"
-      puts "Location ID: Any postal code worldwide"
+      puts "Location ID: Any postal code worldwide, lat,lon coordinates, or GPS via --gps"
       puts "  - US: 77511, 10001, 90210"
-      puts "  - International: 75001 (Paris), SW1A1AA (London), etc.\n\n"
+      puts "  - International: 75001 (Paris), SW1A1AA (London), etc."
+      puts "  - Coordinates: 48.8566,2.3522"
+      puts "  - GPS: saytime.rb --gps -n 546054 (requires gpsd)\n\n"
       puts "Examples:"
       puts "  ruby saytime.rb -l 77511 -n 546054"
       puts "  ruby saytime.rb -l 77511 -n 546054 -s 1"
@@ -163,10 +170,11 @@ module SaytimeWeather
         exit 1
       end
 
-      if @options[:weather_enabled] && !@options[:location_id]
-        error("Location ID (postal code) is required when weather is enabled")
-        error("  Use --no-weather (double dash) to disable weather announcements")
-        error("  Example: saytime.rb --no-weather -n 546054")
+      if @options[:weather_enabled] && !@options[:location_id] && !gps_weather_enabled?
+        error('Location ID (postal code) is required when weather is enabled')
+        error('  Use --gps or set location_source = gps in weather.ini for GPS location')
+        error('  Use --no-weather (double dash) to disable weather announcements')
+        error('  Example: saytime.rb --no-weather -n 546054')
         exit 1
       end
 

@@ -11,6 +11,7 @@ A Ruby implementation of a time and weather announcement system for Asterisk PBX
 - Ruby 2.7+
 - Asterisk PBX (tested with versions 16+)
 - Internet connection for weather API access
+- **gpsd** (optional, recommended for `--gps` / `location_source = gps`; Debian package `Recommends: gpsd`)
 
 ## Layout (source and Debian package)
 
@@ -38,15 +39,26 @@ Optional **environment variables** (defaults suit ASL3 / typical Linux installs)
 | `SAYTIME_SOUND_ROOT` | Base Asterisk English sounds directory (default `/usr/share/asterisk/sounds/en`) |
 | `ASTERISK_BIN` | Asterisk binary for playback (default `/usr/sbin/asterisk`) |
 
-Optional **`weather.ini`** keys under `[weather]` for HTTP behavior: `http_timeout_short`, `http_timeout_long`, `nominatim_delay`, `http_get_retries`, `http_get_retry_sleep`, `airports_cache_max_age_seconds`, `airports_data_url`. See the commented block in the default config under `/usr/share/saytime-weather-rb/weather.ini`.
+Optional **`weather.ini`** keys under `[weather]` (see the commented template at `/usr/share/saytime-weather-rb/weather.ini`):
+
+| Area | Keys |
+|------|------|
+| **Providers** | `weather_provider` (optional), `weather_provider_random`, `weather_provider_random_max_attempts`, `http_probe_timeout` |
+| **Location** | `location_source` (`postal` or `gps`), `gpsd_host`, `gpsd_port`, `gps_min_mode`, `gps_max_age_seconds`, `gps_fallback_location`, … |
+| **Performance** | `geocode_cache_max_age_seconds`, `timezone_cache_max_age_seconds`, `saytime_play_delay` |
+| **HTTP / airports** | `http_timeout_short`, `http_timeout_long`, `nominatim_delay`, `http_get_retries`, `http_get_retry_sleep`, `airports_cache_max_age_seconds`, `airports_data_url` |
+
+Environment variable **`SAYTIME_PLAY_DELAY`** overrides `saytime_play_delay` when set.
 
 ## Installation
 
 ```bash
 cd /tmp
-wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.14/saytime-weather-rb_0.0.14-1_all.deb
-sudo apt install ./saytime-weather-rb_0.0.14-1_all.deb
+wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.17/saytime-weather-rb_0.0.17-1_all.deb
+sudo apt install ./saytime-weather-rb_0.0.17-1_all.deb
 ```
+
+Or install the latest `.deb` from [Releases](https://github.com/hardenedpenguin/saytime_weather_rb/releases).
 
 ## Upgrading
 
@@ -78,7 +90,7 @@ The configuration file is located at `/etc/asterisk/local/weather.ini`:
 Temperature_mode = F
 process_condition = YES
 default_country = us
-weather_provider = openmeteo
+weather_provider_random = YES
 show_precipitation = NO
 show_wind = NO
 show_pressure = NO
@@ -92,13 +104,13 @@ precip_trace_mm = 0.10
 - **Temperature_mode**: `F` for Fahrenheit or `C` for Celsius (default: `F`)
 - **process_condition**: `YES` to process weather conditions, `NO` to skip (default: `YES`)
 - **default_country**: ISO country code for postal code lookups (default: `us`)
-- **weather_provider** (default: `openmeteo`):
+- **weather_provider** (optional; internal fallback `openmeteo` when unset):
   - `openmeteo`: worldwide, no API key
   - `nws`: US-only, no API key (falls back to `openmeteo` if unavailable / non-US)
   - `metno`: worldwide, no API key (MET Norway / Yr)
   - `wttr`: worldwide, no API key (wttr.in)
   - `7timer`: worldwide, no API key (7Timer!)
-- **weather_provider_random**: `YES` to spread postal-code lookups across the other eligible providers (not your `weather_provider`); your configured provider is tried last. `NO` uses only `weather_provider` (default). Does not affect airport METAR lookups.
+- **weather_provider_random** (default: `YES`): spread postal-code lookups across eligible providers; Open-Meteo (or your `weather_provider` if set) is tried last. Set `NO` and set `weather_provider` to pin a single provider. Does not affect airport METAR lookups.
 
 ### Additional Weather Data
 
@@ -136,10 +148,12 @@ sudo /usr/sbin/weather.rb 75001                    # US postal code
 sudo /usr/sbin/weather.rb DFW                      # IATA airport code (3 letters)
 sudo /usr/sbin/weather.rb KDFW                     # ICAO airport code (4 letters)
 sudo /usr/sbin/weather.rb --default-country fr 75001  # International
+sudo /usr/sbin/weather.rb 48.8566,2.3522 v         # lat,lon coordinates
+sudo /usr/sbin/weather.rb --gps v                  # GPS via gpsd (no location arg)
 sudo /usr/sbin/weather.rb 75001 v                  # Display text only (verbose mode)
 ```
 
-Options: `-d, --default-country CC`, `-c, --config-file FILE`, `-t, --temperature-mode M`, `--no-condition`, `-v, --verbose`, `-h, --help`
+Options: `-d, --default-country CC`, `-c, --config FILE`, `-t, --temperature-mode M`, `--no-condition`, `--gps`, `-v, --verbose`, `-h, --help`
 
 **IATA → ICAO:** The script loads the public [Our Airports](https://ourairports.com/data.html) CSV over HTTPS and caches it under `/tmp/saytime-weather-ourairports.csv` (refreshed when older than seven days). If the registry cannot be fetched and there is no cache yet, unknown three-letter codes fall back to `K` + IATA (US-style), which may be wrong outside the US.
 
@@ -171,16 +185,33 @@ Examples:
 sudo /usr/sbin/saytime.rb -l 75001 -n 123456       # Basic announcement
 sudo /usr/sbin/saytime.rb -l 75001 -n 123456 -u    # 24-hour format
 sudo /usr/sbin/saytime.rb -l 75001 -n 123456 --no-weather  # Time only
+sudo /usr/sbin/saytime.rb --gps -n 123456          # GPS location via gpsd
+sudo /usr/sbin/saytime.rb -l 48.8566,2.3522 -n 123456  # Explicit coordinates
 TZ=UTC /usr/sbin/saytime.rb -l 75001 -n 123456 --no-weather  # UTC time
 ```
 
-Required: `-l, --location_id=ID`, `-n, --node_number=NUM`
+Required: `-n, --node_number=NUM`. `-l, --location_id=ID` is required when weather is enabled unless GPS is used.
 
-Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FILE`, `-v, --verbose`, `--dry-run`, `--no-weather`, `--weather-subprocess`
+Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FILE`, `--gps`, `-v, --verbose`, `--dry-run`, `--no-weather`, `--weather-subprocess`
+
+### GPS location
+
+Set `location_source = gps` in `weather.ini`, or pass `--gps` on the command line. Coordinates come from **gpsd** (recommended; package `Recommends: gpsd`). If gpsd is unavailable, the app tries `gpspipe` when installed. The last good fix is cached under `/tmp/saytime-gps-fix.json`.
+
+```bash
+sudo apt install gpsd gpsd-clients
+# Configure /etc/default/gpsd for your USB serial device, then:
+sudo systemctl enable --now gpsd
+gpspipe -w -n 5   # verify fix
+
+sudo /usr/sbin/saytime.rb --gps -n 123456
+```
+
+Optional `weather.ini` keys: `gpsd_host`, `gpsd_port`, `gps_min_mode`, `gps_max_age_seconds`, `gps_fallback_location` (postal code used when no fix). An explicit `-l` on the command line overrides `location_source = gps`.
 
 **Important:** The `-l, --location_id` option is a `saytime.rb` option (not a `weather.rb` option). When you specify `-l <location>`, `saytime.rb` runs weather retrieval **in-process** by default (faster than spawning `weather.rb`). Use `--weather-subprocess` for the legacy subprocess behavior. Options `-d`, `-c`, `-v`, and settings from `weather.ini` are passed through automatically. You cannot use `-l` directly with `weather.rb` — it only accepts location as a positional argument.
 
-**Programmatic API:** `SaytimeWeather.run_weather(location, verbose: true, default_country: 'us')` returns `true`/`false` (see `lib/saytime_weather/weather_runner.rb`).
+**Programmatic API:** `SaytimeWeather.run_weather(location, verbose: true, use_gps: true, default_country: 'us')` returns `true`/`false` (see `lib/saytime_weather/weather_runner.rb`). Pass `use_gps: true` with a nil/empty location for GPS mode.
 
 **12-hour format:** Times like 2:06 are announced as "two oh six" using `letters/o.ulaw` when present, otherwise the digit zero is used.
 
@@ -188,13 +219,13 @@ Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FI
 
 | Situation | What time is announced |
 |-----------|------------------------|
-| **`TZ` is set** (e.g. `TZ=UTC`, `TZ=Europe/London`) | Time in that timezone. `TZ` overrides everything. |
-| **Weather on, location = postal code**, weather ran successfully | Time in the **location’s timezone** (from Open-Meteo or NWS; written to `/tmp/timezone` by `weather.rb`). |
+| **Weather on**, location timezone file written (`/tmp/timezone`) | Time in the **location’s timezone** (postal, coordinates, GPS, or airport via Open-Meteo/NWS). |
+| **`TZ` is set** and no location timezone file | Time in that `TZ` value. |
 | **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK) | **Airport timezone** when Our Airports has coordinates (via Open-Meteo); otherwise **system local time**. |
 | **`--no-weather`** | **System local time** (weather is not run, so no location timezone is available). |
-| **Weather on but no valid timezone** (e.g. weather failed, or timezone file missing/invalid) | **System local time** (fallback). |
+| **Weather on but no valid timezone** (e.g. weather failed, or timezone file missing/invalid) | **`TZ` if set**, otherwise **system local time**. |
 
-Summary: **Timezone is used** when (1) you set `TZ`, or (2) weather succeeds and a timezone file is written (postal codes via Open-Meteo/NWS; airport codes via Our Airports + Open-Meteo when coordinates are known). Otherwise **system local time** is announced.
+Summary: when weather succeeds, the location timezone file takes priority over `TZ`. With `--no-weather`, only `TZ` or system local time applies.
 
 Run with `--help` for complete option list.
 
@@ -206,6 +237,12 @@ exten => s,1,NoOp(Time and Weather Announcement)
 same => n,Set(NODENUM=${EXTEN})
 same => n,System(/usr/sbin/saytime.rb -l 75001 -n ${NODENUM})
 same => n,Hangup()
+```
+
+For GPS-based sites (with gpsd running):
+
+```ini
+same => n,System(/usr/sbin/saytime.rb --gps -n ${NODENUM})
 ```
 
 ## Scheduled Announcements

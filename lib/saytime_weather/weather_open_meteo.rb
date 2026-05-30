@@ -2,52 +2,45 @@
 
 module SaytimeWeather
   module WeatherOpenMeteo
-    def fetch_timezone_openmeteo(lat, lon)
-      return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
-
-      url = SaytimeWeather::Endpoints.open_meteo_url(lat, lon, 'temperature_2m')
-      response = @http.get(url, SaytimeWeather::Network.timeout_long)
-      return nil unless response
-
-      data = safe_decode_json(response)
-      timezone = data && data['timezone']
-      write_timezone_file(timezone) if timezone && !timezone.empty?
-      timezone
+    def read_timezone_cache(lat, lon)
+      path = Paths.timezone_cache_path(lat, lon)
+      data = Cache.read_json(path, Network.timezone_cache_max_age)
+      tz = data && data['timezone']
+      tz if tz && !tz.to_s.empty?
     end
 
-    def fetch_weather_openmeteo(lat, lon)
-      return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+    def write_timezone_cache(lat, lon, timezone)
+      return unless timezone && !timezone.to_s.empty?
 
-      current_params = "temperature_2m,weather_code,is_day"
-      if @config['show_precipitation'] == 'YES' || @config['show_wind'] == 'YES' || @config['show_pressure'] == 'YES' || @config['show_humidity'] == 'YES'
-        current_params += ",precipitation" if @config['show_precipitation'] == 'YES'
-        current_params += ",wind_speed_10m,wind_direction_10m,wind_gusts_10m" if @config['show_wind'] == 'YES'
-        current_params += ",pressure_msl" if @config['show_pressure'] == 'YES'
-        current_params += ",relative_humidity_2m" if @config['show_humidity'] == 'YES'
+      Cache.write_json(Paths.timezone_cache_path(lat, lon), { 'timezone' => timezone })
+    end
+
+    def open_meteo_current_params(include_extras: false)
+      params = 'temperature_2m,weather_code,is_day'
+      return params unless include_extras
+
+      if @config['show_precipitation'] == 'YES' || @config['show_wind'] == 'YES' ||
+         @config['show_pressure'] == 'YES' || @config['show_humidity'] == 'YES'
+        params += ',precipitation' if @config['show_precipitation'] == 'YES'
+        params += ',wind_speed_10m,wind_direction_10m,wind_gusts_10m' if @config['show_wind'] == 'YES'
+        params += ',pressure_msl' if @config['show_pressure'] == 'YES'
+        params += ',relative_humidity_2m' if @config['show_humidity'] == 'YES'
       end
+      params
+    end
 
-      url = SaytimeWeather::Endpoints.open_meteo_url(lat, lon, current_params)
-      response = @http.get(url, SaytimeWeather::Network.timeout_long)
-      return nil unless response
-
-      data = safe_decode_json(response)
+    def parse_openmeteo_response(data)
       return nil unless data && data['current']
 
       temp = data['current']['temperature_2m']
       code = data['current']['weather_code']
       is_day = data['current']['is_day'] || 1
-
       return nil unless temp.is_a?(Numeric)
-
-      condition = weather_code_to_text(code, is_day)
-      timezone = data['timezone'] || ''
-
-      write_timezone_file(timezone)
 
       {
         temp: temp,
-        condition: condition,
-        timezone: timezone,
+        condition: weather_code_to_text(code, is_day),
+        timezone: data['timezone'] || '',
         precipitation: data['current']['precipitation'],
         wind_speed: data['current']['wind_speed_10m'],
         wind_direction: data['current']['wind_direction_10m'],
@@ -55,6 +48,47 @@ module SaytimeWeather
         pressure: data['current']['pressure_msl'],
         humidity: data['current']['relative_humidity_2m']
       }
+    end
+
+    def fetch_openmeteo(lat, lon, include_extras: false)
+      return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+
+      params = open_meteo_current_params(include_extras: include_extras)
+      url = Endpoints.open_meteo_url(lat, lon, params)
+      response = @http.get(url, Network.timeout_long)
+      return nil unless response
+
+      parse_openmeteo_response(safe_decode_json(response))
+    end
+
+    def fetch_timezone_openmeteo(lat, lon)
+      return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
+
+      if (cached = read_timezone_cache(lat, lon))
+        write_timezone_file(cached)
+        return cached
+      end
+
+      url = Endpoints.open_meteo_url(lat, lon, 'temperature_2m')
+      response = @http.get(url, Network.timeout_long)
+      return nil unless response
+
+      data = safe_decode_json(response)
+      timezone = data && data['timezone']
+      if timezone && !timezone.empty?
+        write_timezone_file(timezone)
+        write_timezone_cache(lat, lon, timezone)
+      end
+      timezone
+    end
+
+    def fetch_weather_openmeteo(lat, lon)
+      data = fetch_openmeteo(lat, lon, include_extras: true)
+      return nil unless data
+
+      write_timezone_file(data[:timezone]) if data[:timezone] && !data[:timezone].empty?
+      write_timezone_cache(lat, lon, data[:timezone]) if data[:timezone] && !data[:timezone].empty?
+      data
     end
 
     def weather_code_to_text(code, is_day = 1)

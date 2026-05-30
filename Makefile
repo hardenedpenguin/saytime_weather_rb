@@ -28,6 +28,9 @@ test:
 	ruby -c lib/saytime_weather/paths.rb
 	ruby -c lib/saytime_weather/network.rb
 	ruby -c lib/saytime_weather/endpoints.rb
+	ruby -c lib/saytime_weather/cache.rb
+	ruby -c lib/saytime_weather/sound_index.rb
+	ruby -c lib/saytime_weather/gps.rb
 	ruby -c lib/saytime_weather/http_client.rb
 	ruby -c lib/saytime_weather/constants.rb
 	ruby -c lib/saytime_weather/ini.rb

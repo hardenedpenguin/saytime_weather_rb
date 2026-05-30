@@ -3,23 +3,29 @@
 module SaytimeWeather
   module SaytimeWeatherBridge
     def process_weather(location_id)
-      return '' unless @options[:weather_enabled] && location_id
+      return '' unless @options[:weather_enabled]
+      return '' unless weather_location_present?(location_id)
 
       temp_file_to_clean = tmp_file('temperature')
       weather_condition_file_to_clean = tmp_file('condition.ulaw')
       File.unlink(temp_file_to_clean) if File.exist?(temp_file_to_clean)
       File.unlink(weather_condition_file_to_clean) if File.exist?(weather_condition_file_to_clean)
 
-      unless location_id =~ /^[a-zA-Z0-9\s\-_]+$/
-        error("Invalid location ID format. Only alphanumeric characters, spaces, hyphens, and underscores are allowed.")
-        error("  Location: #{location_id}")
-        @critical_error = true
-        return ''
+      location_id = nil if gps_weather_enabled?
+
+      if location_id && !location_id.empty?
+        unless location_id.match?(/\A[a-zA-Z0-9\s\-_.,]+\z/)
+          error('Invalid location ID format. Use postal code, airport code, or lat,lon coordinates.')
+          error("  Location: #{location_id}")
+          @critical_error = true
+          return ''
+        end
       end
 
       unless invoke_weather_script(location_id)
-        error("Weather script failed:")
-        error("  Location: #{location_id}")
+        label = location_id.to_s.empty? ? 'gps' : location_id
+        error('Weather script failed:')
+        error("  Location: #{label}")
         error("  Hint: Check that weather.rb completed successfully and location ID is valid")
         @critical_error = true
         return ''
@@ -52,21 +58,27 @@ module SaytimeWeather
     def weather_subprocess_argv(location_id)
       args = []
       args << '-v' if @options[:verbose]
+      args << '--gps' if gps_weather_enabled?
       args += ['-c', @options[:config_file]] if @options[:config_file]
       args += ['-d', @options[:default_country]] if @options[:default_country]
       args += ['-t', @config['Temperature_mode']] if @config['Temperature_mode']
       args << '--no-condition' if @config['process_condition'] == 'NO'
-      args << location_id
+      args << location_id if location_id && !location_id.empty?
       args
     end
 
     def weather_invoke_options
       opts = { verbose: @options[:verbose] }
+      opts[:use_gps] = true if gps_weather_enabled?
       opts[:config_file] = @options[:config_file] if @options[:config_file]
       opts[:default_country] = @options[:default_country] if @options[:default_country]
       opts[:temperature_mode] = @config['Temperature_mode'] if @config['Temperature_mode']
       opts[:no_condition] = true if @config['process_condition'] == 'NO'
       opts
+    end
+
+    def weather_location_present?(location_id)
+      gps_weather_enabled? || !location_id.to_s.empty?
     end
 
     def build_weather_sound_files

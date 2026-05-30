@@ -16,6 +16,9 @@ class TestRunner
     t.test_ini_parse
     t.test_units
     load File.expand_path('provider_order_test.rb', __dir__)
+    load File.expand_path('cache_test.rb', __dir__)
+    load File.expand_path('saytime_time_test.rb', __dir__)
+    load File.expand_path('gps_test.rb', __dir__)
     puts "All #{@count} tests passed."
   end
 
