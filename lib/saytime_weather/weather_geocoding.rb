@@ -96,16 +96,19 @@ module SaytimeWeather
     end
 
     def geocode_country_hint(postal)
-      if postal =~ /^\d{5}$/
-        @config['default_country'].downcase
-      elsif postal =~ /^([A-Z]\d[A-Z])\s?\d[A-Z]\d$/i
-        'ca'
-      end
+      cc = @config['default_country'].to_s.downcase
+      return cc if postal =~ /^\d{5}$/
+      return 'ca' if postal =~ /^([A-Z]\d[A-Z])\s?\d[A-Z]\d$/i
+      return cc if postal =~ /^\d{4}$/ && !cc.empty? && cc != 'us'
+
+      nil
     end
 
     def geocode_nominatim_url(postal, country_hint)
       if postal =~ /^\d{5}$/
         Endpoints.nominatim_postal_url(postal, country: country_hint || @config['default_country'].downcase)
+      elsif postal =~ /^\d{4}$/ && country_hint
+        Endpoints.nominatim_postal_url(postal, country: country_hint)
       elsif postal =~ /^([A-Z]\d[A-Z])\s?\d[A-Z]\d$/i
         normalized = postal.upcase.gsub(/\s+/, '').sub(/^([A-Z]\d[A-Z])(\d[A-Z]\d)$/, '\1 \2')
         Endpoints.nominatim_postal_url(normalized, country: 'ca')

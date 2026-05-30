@@ -103,7 +103,7 @@ precip_trace_mm = 0.10
 
 - **Temperature_mode**: `F` for Fahrenheit or `C` for Celsius (default: `F`)
 - **process_condition**: `YES` to process weather conditions, `NO` to skip (default: `YES`)
-- **default_country**: ISO country code for postal code lookups (default: `us`). Override per run with `-d` / `--default-country` on `weather.rb` or `saytime.rb` without editing `weather.ini` (e.g. `-d fr -l 75001` geocodes Paris when the config still says `us`).
+- **default_country**: ISO country code for postal code lookups (default: `us`). Override per run with `-d` / `--default-country` on `weather.rb` or `saytime.rb` without editing `weather.ini`. Applies to **5-digit** postcodes (e.g. `-d fr -l 75001` → Paris) and **4-digit** postcodes when the country is not `us` (e.g. `-d au -l 2000` → Sydney).
 - **weather_provider** (optional; internal fallback `openmeteo` when unset):
   - `openmeteo`: worldwide, no API key
   - `nws`: US-only, no API key (falls back to `openmeteo` if unavailable / non-US)
@@ -147,7 +147,8 @@ Examples:
 sudo /usr/sbin/weather.rb 75001                    # US postal code
 sudo /usr/sbin/weather.rb DFW                      # IATA airport code (3 letters)
 sudo /usr/sbin/weather.rb KDFW                     # ICAO airport code (4 letters)
-sudo /usr/sbin/weather.rb --default-country fr 75001  # International
+sudo /usr/sbin/weather.rb --default-country fr 75001  # France (5-digit)
+sudo /usr/sbin/weather.rb --default-country au 2000  # Australia (4-digit, Sydney CBD)
 sudo /usr/sbin/weather.rb 48.8566,2.3522 v         # lat,lon coordinates
 sudo /usr/sbin/weather.rb --gps v                  # GPS via gpsd (no location arg)
 sudo /usr/sbin/weather.rb 75001 v                  # Display text only (verbose mode)

@@ -2,6 +2,11 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.21] - 2026-05-31
+
+### Fixed
+- **4-digit international postcodes**: `-d au` (or `default_country = au` in `weather.ini`) now geocodes 4-digit codes such as `2000` as Australia (Sydney CBD) instead of an ambiguous international lookup.
+
 ## [0.0.20] - 2026-05-30
 
 ### Fixed
