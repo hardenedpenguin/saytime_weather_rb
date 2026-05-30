@@ -158,6 +158,7 @@ module SaytimeWeather
       if lat && lon
         weather_data, provider = fetch_coordinate_weather(lat, lon, label)
         if weather_data && weather_data[:temp] && weather_data[:condition]
+          @weather_data = weather_data
           return [weather_data[:temp].to_s, weather_data[:condition], provider]
         end
 

@@ -2,6 +2,11 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.18] - 2026-05-30
+
+### Fixed
+- **show_* extras on postal/GPS lookups**: `show_wind`, `show_humidity`, `show_precipitation`, and `show_pressure` now appear in weather text output when enabled (provider data was fetched but `@weather_data` was not assigned before formatting).
+
 ## [0.0.17] - 2026-05-19
 
 ### Added
