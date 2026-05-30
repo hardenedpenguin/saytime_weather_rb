@@ -121,6 +121,11 @@ module SaytimeWeather
         if @options[:verbose]
           mode = provider_random_enabled? ? 'random rotation' : 'configured'
           warn("Weather from #{provider.upcase} (#{mode})")
+          if data[:observation_time] && !data[:observation_time].to_s.empty?
+            tz = data[:timezone].to_s.strip
+            place = tz.empty? ? '' : " (#{tz})"
+            warn("Observation time: #{data[:observation_time]}#{place} at #{format('%.4f, %.4f', lat, lon)}")
+          end
         end
         return [data, provider]
       end

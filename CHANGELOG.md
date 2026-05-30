@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.20] - 2026-05-30
+
+### Fixed
+- **Open-Meteo night conditions**: `is_day: 0` was treated as day because of `|| 1` (Ruby falsy zero). Evening codes 1–2 no longer report "Sunny" / "Mostly Sunny" after 20:00 local time.
+
+### Added
+- **Verbose observation time**: `-v` logs provider local observation time, timezone, and coordinates.
+
 ## [0.0.19] - 2026-05-30
 
 ### Added

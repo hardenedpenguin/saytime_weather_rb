@@ -34,13 +34,15 @@ module SaytimeWeather
 
       temp = data['current']['temperature_2m']
       code = data['current']['weather_code']
-      is_day = data['current']['is_day'] || 1
+      local_time = data['current']['time'].to_s
+      is_day = open_meteo_is_day(data['current']['is_day'])
       return nil unless temp.is_a?(Numeric)
 
       {
         temp: temp,
-        condition: weather_code_to_text(code, is_day),
+        condition: weather_code_to_text(code, is_day, local_time: local_time),
         timezone: data['timezone'] || '',
+        observation_time: local_time,
         precipitation: data['current']['precipitation'],
         wind_speed: data['current']['wind_speed_10m'],
         wind_direction: data['current']['wind_direction_10m'],
@@ -91,11 +93,25 @@ module SaytimeWeather
       data
     end
 
-    def weather_code_to_text(code, is_day = 1)
-      return 'Sunny' if code == 1 && is_day == 1
-      return 'Mainly Clear' if code == 1 && is_day == 0
-      return 'Mostly Sunny' if code == 2 && is_day == 1
-      return 'Partly Cloudy' if code == 2 && is_day == 0
+    def open_meteo_is_day(raw)
+      return raw if raw == 0 || raw == 1
+
+      1
+    end
+
+    def open_meteo_evening?(local_time)
+      m = local_time.to_s.match(/T(\d{2}):(\d{2})/)
+      return false unless m
+
+      m[1].to_i >= 20
+    end
+
+    def weather_code_to_text(code, is_day = 1, local_time: nil)
+      night = is_day == 0 || open_meteo_evening?(local_time)
+      return 'Sunny' if code == 1 && !night
+      return 'Mainly Clear' if code == 1 && night
+      return 'Mostly Sunny' if code == 2 && !night
+      return 'Partly Cloudy' if code == 2 && night
 
       codes = {
         0 => 'Clear',
