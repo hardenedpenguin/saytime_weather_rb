@@ -4,6 +4,24 @@ require 'optparse'
 
 module SaytimeWeather
   module SaytimeCli
+    # Split clustered short flags (-mu → -m -u) before OptionParser. Keeps -n546052 intact.
+    def expand_short_option_clusters(argv)
+      out = []
+      argv.each do |arg|
+        if !arg.start_with?('--') && (m = arg.match(/\A-([a-zA-Z]{2,})\z/))
+          letters = m[1]
+          if letters.match?(/\A[a-zA-Z]\d/)
+            out << arg
+          else
+            letters.each_char { |c| out << "-#{c}" }
+          end
+        else
+          out << arg
+        end
+      end
+      out
+    end
+
     # Bare `-m` means "use playback"; leave `-m playback` / `-m localplay` as two tokens for OptionParser.
     def expand_bare_m_flag(argv)
       i = 0
@@ -18,8 +36,14 @@ module SaytimeWeather
       end
     end
 
+    def prepare_argv(argv)
+      expanded = expand_short_option_clusters(argv)
+      expand_bare_m_flag(expanded)
+      expanded
+    end
+
     def parse_options
-      expand_bare_m_flag(ARGV)
+      ARGV.replace(prepare_argv(ARGV))
 
       parser = OptionParser.new do |opts|
         opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
