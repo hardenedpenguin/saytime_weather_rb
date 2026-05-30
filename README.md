@@ -103,7 +103,7 @@ precip_trace_mm = 0.10
 
 - **Temperature_mode**: `F` for Fahrenheit or `C` for Celsius (default: `F`)
 - **process_condition**: `YES` to process weather conditions, `NO` to skip (default: `YES`)
-- **default_country**: ISO country code for postal code lookups (default: `us`)
+- **default_country**: ISO country code for postal code lookups (default: `us`). Override per run with `-d` / `--default-country` on `weather.rb` or `saytime.rb` without editing `weather.ini` (e.g. `-d fr -l 75001` geocodes Paris when the config still says `us`).
 - **weather_provider** (optional; internal fallback `openmeteo` when unset):
   - `openmeteo`: worldwide, no API key
   - `nws`: US-only, no API key (falls back to `openmeteo` if unavailable / non-US)

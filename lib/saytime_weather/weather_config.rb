@@ -43,7 +43,13 @@ module SaytimeWeather
       @config['precip_trace_mm'] ||= '0.10'
       @config['location_source'] ||= 'postal'
 
-      @config['default_country'] = @options[:default_country] if @options[:default_country]
+      if @options[:default_country]
+        ini_country = @config['default_country']
+        @config['default_country'] = @options[:default_country].downcase
+        if @options[:verbose] && ini_country && ini_country.downcase != @config['default_country']
+          warn("Using -d country override: #{@config['default_country']} (weather.ini has #{ini_country.downcase})")
+        end
+      end
       @config['Temperature_mode'] = @options[:temperature_mode] if @options[:temperature_mode]
       @config['process_condition'] = 'NO' if @options[:no_condition]
 

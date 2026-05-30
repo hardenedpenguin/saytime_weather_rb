@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.19] - 2026-05-30
+
+### Added
+- **Verbose geocoding**: `-v` logs when `-d` overrides `default_country` in `weather.ini` and shows resolved country, coordinates, and place name for postal lookups.
+
+### Changed
+- **README**: Document that `-d` / `--default-country` overrides `weather.ini` without editing the config (e.g. `-d fr -l 75001` for Paris when config says `us`).
+
 ## [0.0.18] - 2026-05-30
 
 ### Fixed

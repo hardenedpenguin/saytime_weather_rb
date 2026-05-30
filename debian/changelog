@@ -1,3 +1,10 @@
+saytime-weather-rb (0.0.19-1) unstable; urgency=medium
+
+  * Verbose geocoding: -d country override and resolved coordinates in -v output
+  * Test that -d fr overrides default_country=us for postal 75001 (Paris vs Dallas)
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Fri, 30 May 2026 14:30:00 -0500
+
 saytime-weather-rb (0.0.18-1) unstable; urgency=medium
 
   * Fix show_wind, show_humidity, show_precipitation, show_pressure on postal lookups

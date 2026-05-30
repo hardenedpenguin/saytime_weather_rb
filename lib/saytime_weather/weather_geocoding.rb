@@ -33,13 +33,17 @@ module SaytimeWeather
       data = Cache.read_json(path, Network.geocode_cache_max_age)
       return nil unless data && data['lat'] && data['lon']
 
-      [data['lat'].to_f, data['lon'].to_f]
+      entry = [data['lat'].to_f, data['lon'].to_f]
+      entry << data['display_name'].to_s if data['display_name']
+      entry
     end
 
-    def write_geocode_cache(postal, country_hint, lat, lon)
+    def write_geocode_cache(postal, country_hint, lat, lon, display_name: nil)
       key = geocode_cache_key(postal, country_hint)
       path = SaytimeWeather::Paths.geocode_cache_path(key)
-      Cache.write_json(path, { 'lat' => lat, 'lon' => lon })
+      payload = { 'lat' => lat, 'lon' => lon }
+      payload['display_name'] = display_name if display_name && !display_name.to_s.empty?
+      Cache.write_json(path, payload)
     end
 
     def postal_to_coordinates(postal)
@@ -50,7 +54,9 @@ module SaytimeWeather
 
       country_hint = geocode_country_hint(postal)
       if (cached = read_geocode_cache(postal, country_hint))
-        return cached
+        lat, lon = cached[0], cached[1]
+        log_geocode_resolution(postal, country_hint, lat, lon, cached[2], source: 'cache')
+        return [lat, lon]
       end
 
       ndelay = Network.nominatim_delay
@@ -71,8 +77,22 @@ module SaytimeWeather
 
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 
-      write_geocode_cache(postal, country_hint, lat, lon)
+      display_name = first_result['display_name'].to_s.strip
+      write_geocode_cache(postal, country_hint, lat, lon, display_name: display_name)
+      log_geocode_resolution(postal, country_hint, lat, lon, display_name, source: 'nominatim')
       [lat, lon]
+    end
+
+    def log_geocode_resolution(postal, country_hint, lat, lon, place_name = nil, source: nil)
+      return unless @options[:verbose]
+
+      country = country_hint || 'intl'
+      coords = format('%.4f, %.4f', lat, lon)
+      place = place_name.to_s.strip
+      place = nil if place.empty?
+      detail = place ? " (#{place})" : ''
+      src = source ? " [#{source}]" : ''
+      warn("Geocoding #{postal} as country #{country} → #{coords}#{detail}#{src}")
     end
 
     def geocode_country_hint(postal)
