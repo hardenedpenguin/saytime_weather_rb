@@ -83,8 +83,11 @@ module SaytimeWeather
         files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw")
 
         if minute != 0
-          o_file = sound_path(sound_dir, 'letters/o.ulaw')
-          files << add_sound_file(indexed_file_exists?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
+          # Leading minute in 12-hour: 2:06 -> "two oh six", not "two zero six"; 2:10 -> "two ten" (no oh)
+          if minute < 10
+            o_file = sound_path(sound_dir, 'letters/o.ulaw')
+            files << add_sound_file(indexed_file_exists?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
+          end
           files << format_number(minute, sound_dir)
         end
         am_pm = hour < 12 ? 'a-m' : 'p-m'

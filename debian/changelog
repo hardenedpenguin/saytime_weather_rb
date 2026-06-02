@@ -1,3 +1,10 @@
+saytime-weather-rb (0.0.22-1) unstable; urgency=medium
+
+  * saytime: restore 12-hour "oh" only for minutes 1-9 (e.g. 2:06 not 2:10)
+  * Tests for 12-hour sound file selection
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Mon, 02 Jun 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.21-1) unstable; urgency=medium
 
   * Honor -d / default_country for 4-digit postcodes (e.g. -d au 2000 → Sydney)

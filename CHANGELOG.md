@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.22] - 2026-06-02
+
+### Fixed
+- **12-hour time announcement**: Restored `minute < 10` guard so "oh" is used only for minutes 1–9 (e.g. 2:06 → "two oh six"). Minutes 10–59 no longer get an erroneous "oh" (e.g. 2:10 → "two ten", not "two oh ten").
+
+### Added
+- **Tests**: `saytime_time_test.rb` covers 12-hour sound path selection for on-the-hour, oh-minutes, and ten-minute cases.
+
 ## [0.0.21] - 2026-05-31
 
 ### Fixed
@@ -169,6 +177,9 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.22]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.21...v0.0.22
+[0.0.21]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.20...v0.0.21
+[0.0.20]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.19...v0.0.20
 [0.0.14]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.11...v0.0.12
