@@ -19,10 +19,8 @@ override_dh_auto_install:
 	# Install sound files
 	install -d debian/saytime-weather-rb/usr/share/asterisk/sounds/en
 	install -d debian/saytime-weather-rb/usr/share/asterisk/sounds/en/wx
-	# Install time sounds (a-m.ulaw, p-m.ulaw) to /usr/share/asterisk/sounds/en/
-	install -m 644 sounds/a-m.ulaw debian/saytime-weather-rb/usr/share/asterisk/sounds/en/
-	install -m 644 sounds/p-m.ulaw debian/saytime-weather-rb/usr/share/asterisk/sounds/en/
 	# Install weather sounds to /usr/share/asterisk/sounds/en/wx/
+	# a-m/p-m: use stock Asterisk en/digits/ (do not install package copies into en/)
 	for sound in sounds/*.ulaw; do \
 		if [ "$$sound" != "sounds/a-m.ulaw" ] && [ "$$sound" != "sounds/p-m.ulaw" ]; then \
 			install -m 644 "$$sound" debian/saytime-weather-rb/usr/share/asterisk/sounds/en/wx/; \

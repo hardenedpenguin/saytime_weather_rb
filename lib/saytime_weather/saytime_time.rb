@@ -44,31 +44,62 @@ module SaytimeWeather
       nil
     end
 
+    # 24-hour clock (0–23) from the resolved announcement time. Greeting and a-m/p-m must
+    # both use this value — never the 12-hour display digit (e.g. 2 PM → hour24 14, not 2).
+    def hour24(now)
+      now.hour
+    end
+
+    def greeting_for_hour24(hour24)
+      if hour24 < 12
+        'morning'
+      elsif hour24 < 18
+        'afternoon'
+      else
+        'evening'
+      end
+    end
+
+    def twelve_hour_display(hour24)
+      (hour24 == 0 || hour24 == 12) ? 12 : (hour24 > 12 ? hour24 - 12 : hour24)
+    end
+
+    def meridian_sound(hour24)
+      hour24 < 12 ? 'a-m' : 'p-m'
+    end
+
+    # a-m/p-m: prefer Asterisk stock under digits/ (correct on most systems). Package copies
+    # in en/ (since 0.0.17 search order) have been reported as wrong (p-m sounds like a-m).
+    def meridian_sound_path(sound_dir, meridian)
+      name = "#{meridian}.ulaw"
+      candidates = [
+        File.join(sound_dir, 'digits', name),
+        File.join(sound_dir, name)
+      ]
+      candidates.find { |p| indexed_file_exists?(p) } || candidates.first
+    end
+
     def process_time(now, use_24hour)
       files = []
       sound_dir = @options[:custom_sound_dir] || Paths.asterisk_sounds_en
       @missing_files = 0
 
+      clock = hour24(now)
+      minute = now.min
+
+      if @options[:verbose]
+        info("Announcing time #{format('%02d:%02d', clock, minute)} (#{use_24hour ? '24-hour' : "12-hour, #{meridian_sound(clock)}"})")
+      end
+
       if @options[:greeting_enabled]
-        hour = now.hour
-        greeting = if hour < 12
-                     'morning'
-                   elsif hour < 18
-                     'afternoon'
-                   else
-                     'evening'
-                   end
-        files << add_sound_file("#{sound_dir}/rpt/good#{greeting}.ulaw")
+        files << add_sound_file("#{sound_dir}/rpt/good#{greeting_for_hour24(clock)}.ulaw")
       end
 
       files << add_sound_file("#{sound_dir}/rpt/thetimeis.ulaw")
 
-      hour = now.hour
-      minute = now.min
-
       if use_24hour
-        files << add_sound_file("#{sound_dir}/digits/0.ulaw") if hour < 10
-        files << format_number(hour, sound_dir)
+        files << add_sound_file("#{sound_dir}/digits/0.ulaw") if clock < 10
+        files << format_number(clock, sound_dir)
 
         if minute == 0
           files << add_sound_file(sound_path(sound_dir, 'hundred.ulaw'))
@@ -79,19 +110,18 @@ module SaytimeWeather
           files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
         end
       else
-        display_hour = (hour == 0 || hour == 12) ? 12 : (hour > 12 ? hour - 12 : hour)
+        display_hour = twelve_hour_display(clock)
         files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw")
 
         if minute != 0
-          # Leading minute in 12-hour: 2:06 -> "two oh six", not "two zero six"; 2:10 -> "two ten" (no oh)
+          # 2:06 -> "two oh six"; 2:10 -> "two ten" (oh only for minutes 1-9)
           if minute < 10
             o_file = sound_path(sound_dir, 'letters/o.ulaw')
             files << add_sound_file(indexed_file_exists?(o_file) ? o_file : "#{sound_dir}/digits/0.ulaw")
           end
           files << format_number(minute, sound_dir)
         end
-        am_pm = hour < 12 ? 'a-m' : 'p-m'
-        files << add_sound_file(sound_path(sound_dir, "#{am_pm}.ulaw"))
+        files << add_sound_file(meridian_sound_path(sound_dir, meridian_sound(clock)))
       end
 
       warn("#{@missing_files} sound file(s) missing. Run with -v for details.") if @missing_files > 0 && !@options[:verbose]

@@ -28,7 +28,13 @@ if [ "$1" = "configure" ]; then
     
     if [ -d /usr/share/asterisk/sounds/en ]; then
         chown -R asterisk:asterisk /usr/share/asterisk/sounds/en/wx 2>/dev/null || true
-        chown asterisk:asterisk /usr/share/asterisk/sounds/en/a-m.ulaw /usr/share/asterisk/sounds/en/p-m.ulaw 2>/dev/null || true
+        # Remove mistaken package a-m/p-m from en/ if stock digits/ copies exist
+        for meridian in a-m p-m; do
+            if [ -f "/usr/share/asterisk/sounds/en/digits/${meridian}.ulaw" ] \
+               && [ -f "/usr/share/asterisk/sounds/en/${meridian}.ulaw" ]; then
+                rm -f "/usr/share/asterisk/sounds/en/${meridian}.ulaw"
+            fi
+        done
     fi
     
     echo "saytime-weather-rb installed successfully."

@@ -2,6 +2,15 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.23] - 2026-06-02
+
+### Fixed
+- **12-hour a-m/p-m sounds**: Prefer stock Asterisk `digits/a-m.ulaw` and `digits/p-m.ulaw` over package copies in `en/`. Since 0.0.17, `en/p-m.ulaw` from the package could play instead of the correct stock file (reported as “p-m sounds like am”).
+- **Debian install**: No longer install package `a-m`/`p-m` into `en/`; postinst removes mistaken `en/` copies when `digits/` stock files exist.
+
+### Added
+- **Tests**: Meridian path resolution, greeting/meridian alignment for all hours, and 7:15 PM announcement order.
+
 ## [0.0.22] - 2026-06-02
 
 ### Fixed
@@ -177,6 +186,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.23]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.22...v0.0.23
 [0.0.22]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.21...v0.0.22
 [0.0.21]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.20...v0.0.21
 [0.0.20]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.19...v0.0.20

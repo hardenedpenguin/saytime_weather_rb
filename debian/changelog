@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.23-1) unstable; urgency=medium
+
+  * saytime: use stock digits/a-m and digits/p-m instead of package en/ copies
+  * postinst: remove mistaken en/a-m and en/p-m when digits/ stock files exist
+  * Tests for meridian path, hour/greeting alignment, 12-hour announcement order
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 03 Jun 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.22-1) unstable; urgency=medium
 
   * saytime: restore 12-hour "oh" only for minutes 1-9 (e.g. 2:06 not 2:10)
