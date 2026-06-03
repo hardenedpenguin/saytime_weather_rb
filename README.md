@@ -199,6 +199,16 @@ Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FI
 
 Set `location_source = gps` in `weather.ini`, or pass `--gps` on the command line. Coordinates come from **gpsd** (recommended; package `Recommends: gpsd`). If gpsd is unavailable, the app tries `gpspipe` when installed. The last good fix is cached under `/tmp/saytime-gps-fix.json`.
 
+**GPS setup script:** For a guided install of gpsd (shared on `127.0.0.1:2947` for saytime and other clients) plus Asterisk APRS/`app_gps` wiring, use [setup-asl3-gps.rb](https://github.com/hardenedpenguin/asl-misc-scripts/blob/main/setup-asl3-gps.rb) from [hardenedpenguin/asl-misc-scripts](https://github.com/hardenedpenguin/asl-misc-scripts):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/hardenedpenguin/asl-misc-scripts/refs/heads/main/setup-asl3-gps.rb | sudo ruby
+```
+
+Run as root; the script prompts for callsign, USB device, and APRS options. After it finishes, use `--gps` or `location_source = gps` as below.
+
+**Manual setup:**
+
 ```bash
 sudo apt install gpsd gpsd-clients
 # Configure /etc/default/gpsd for your USB serial device, then:
