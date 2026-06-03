@@ -18,6 +18,7 @@ class TestRunner
     load File.expand_path('provider_order_test.rb', __dir__)
     load File.expand_path('cache_test.rb', __dir__)
     load File.expand_path('saytime_time_test.rb', __dir__)
+    load File.expand_path('saytime_regression_audit.rb', __dir__)
     load File.expand_path('gps_test.rb', __dir__)
     load File.expand_path('geocoding_config_test.rb', __dir__)
     load File.expand_path('open_meteo_test.rb', __dir__)

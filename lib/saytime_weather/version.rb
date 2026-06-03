@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module SaytimeWeather
-  VERSION = '0.0.23'
+  VERSION = '0.0.24'
 end

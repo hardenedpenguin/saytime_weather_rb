@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.24] - 2026-06-03
+
+### Fixed
+- **saytime sound resolution**: `sound_path` documents `prefer_digits` (meridian uses digits-first; hours/hundred stay en-first).
+
+### Added
+- **Tests**: `saytime_regression_audit.rb` runs in CI; meridian paths must use `digits/` when present.
+
 ## [0.0.23] - 2026-06-02
 
 ### Fixed
@@ -186,6 +194,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.24]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.23...v0.0.24
 [0.0.23]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.22...v0.0.23
 [0.0.22]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.21...v0.0.22
 [0.0.21]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.20...v0.0.21

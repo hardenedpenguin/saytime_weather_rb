@@ -135,8 +135,8 @@ assert_12h_files(out, hour_digit: 2, minute_files: ['digits/15.ulaw'], am_pm: 'p
   exp_ap = hour < 12 ? 'a-m' : 'p-m'
   assert(out.include?("#{FAKE_SND}/rpt/good#{exp_g}.ulaw"),
          "hour #{hour}: expected good#{exp_g}")
-  assert(out.include?("#{FAKE_SND}/#{exp_ap}.ulaw") || out.include?("#{FAKE_SND}/digits/#{exp_ap}.ulaw"),
-         "hour #{hour}: expected #{exp_ap}")
+  assert(out.include?("#{FAKE_SND}/digits/#{exp_ap}.ulaw"),
+         "hour #{hour}: meridian should resolve under digits/")
 end
 
 # 24-hour mode: no a-m/p-m; afternoon hour uses 14 + hours

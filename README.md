@@ -54,8 +54,8 @@ Environment variable **`SAYTIME_PLAY_DELAY`** overrides `saytime_play_delay` whe
 
 ```bash
 cd /tmp
-wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.23/saytime-weather-rb_0.0.23-1_all.deb
-sudo apt install ./saytime-weather-rb_0.0.23-1_all.deb
+wget https://github.com/hardenedpenguin/saytime_weather_rb/releases/download/v0.0.24/saytime-weather-rb_0.0.24-1_all.deb
+sudo apt install ./saytime-weather-rb_0.0.24-1_all.deb
 ```
 
 Or install the latest `.deb` from [Releases](https://github.com/hardenedpenguin/saytime_weather_rb/releases).

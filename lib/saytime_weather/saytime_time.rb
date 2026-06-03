@@ -68,15 +68,9 @@ module SaytimeWeather
       hour24 < 12 ? 'a-m' : 'p-m'
     end
 
-    # a-m/p-m: prefer Asterisk stock under digits/ (correct on most systems). Package copies
-    # in en/ (since 0.0.17 search order) have been reported as wrong (p-m sounds like a-m).
+    # a-m/p-m: prefer stock Asterisk digits/ (package en/ copies were wrong on some nodes).
     def meridian_sound_path(sound_dir, meridian)
-      name = "#{meridian}.ulaw"
-      candidates = [
-        File.join(sound_dir, 'digits', name),
-        File.join(sound_dir, name)
-      ]
-      candidates.find { |p| indexed_file_exists?(p) } || candidates.first
+      sound_path(sound_dir, "#{meridian}.ulaw", prefer_digits: true)
     end
 
     def process_time(now, use_24hour)
@@ -155,11 +149,13 @@ module SaytimeWeather
       files
     end
 
-    def sound_path(sound_dir, name)
-      candidates = [
-        File.join(sound_dir, name),
-        File.join(sound_dir, 'digits', name)
-      ]
+    # prefer_digits: true for a-m/p-m (stock under digits/). false for hours/hundred (usually en/).
+    def sound_path(sound_dir, name, prefer_digits: false)
+      candidates = if prefer_digits
+                       [File.join(sound_dir, 'digits', name), File.join(sound_dir, name)]
+                     else
+                       [File.join(sound_dir, name), File.join(sound_dir, 'digits', name)]
+                     end
       candidates.find { |p| indexed_file_exists?(p) } || candidates.first
     end
 

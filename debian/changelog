@@ -1,3 +1,10 @@
+saytime-weather-rb (0.0.24-1) unstable; urgency=medium
+
+  * saytime: sound_path prefer_digits flag; meridian uses digits/ then en/
+  * Tests: saytime_regression_audit.rb in CI; stricter meridian path checks
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 03 Jun 2026 18:00:00 -0500
+
 saytime-weather-rb (0.0.23-1) unstable; urgency=medium
 
   * saytime: use stock digits/a-m and digits/p-m instead of package en/ copies
