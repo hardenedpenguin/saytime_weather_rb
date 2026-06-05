@@ -23,6 +23,7 @@ class TestRunner
     load File.expand_path('geocoding_config_test.rb', __dir__)
     load File.expand_path('open_meteo_test.rb', __dir__)
     load File.expand_path('saytime_cli_test.rb', __dir__)
+    load File.expand_path('weather_gps_run_test.rb', __dir__)
     puts "All #{@count} tests passed."
   end
 

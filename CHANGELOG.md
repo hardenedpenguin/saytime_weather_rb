@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.25] - 2026-06-04
+
+### Fixed
+- **GPS weather**: `saytime.rb --gps` and in-process weather no longer crash with `undefined method 'empty?' for nil` when no `-l` location is passed.
+
+### Added
+- **Tests**: `weather_gps_run_test.rb` covers GPS mode with a nil location.
+
 ## [0.0.24] - 2026-06-03
 
 ### Fixed
@@ -194,6 +202,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.25]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.24...v0.0.25
 [0.0.24]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.23...v0.0.24
 [0.0.23]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.22...v0.0.23
 [0.0.22]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.21...v0.0.22

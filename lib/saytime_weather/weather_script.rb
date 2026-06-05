@@ -96,14 +96,21 @@ module SaytimeWeather
   # Returns true on success, false on failure (does not exit).
   def run(location: nil, display_only: nil)
       @http.verbose = @options[:verbose]
-      location = (location || ARGV[0]).to_s unless gps_location_enabled?
       display_only = display_only || ARGV[1]
-      @explicit_location = !location.to_s.strip.empty?
 
-      if !gps_location_enabled? && location.empty?
-        show_usage
-        return :usage
+      if gps_location_enabled?
+        loc = location.to_s.strip
+        location = loc.empty? ? nil : loc
+      else
+        location = (location || ARGV[0]).to_s
+        if location.empty?
+          show_usage
+          return :usage
+        end
+        location = location.strip
       end
+
+      @explicit_location = !location.to_s.strip.empty?
 
       unless valid_location_format?(location)
         error("Invalid location format.")
@@ -112,7 +119,6 @@ module SaytimeWeather
         return false
       end
 
-      location = location.strip unless location.empty?
       cleanup_old_files
 
       temperature, condition, provider = fetch_weather_for_location(location)
