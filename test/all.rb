@@ -24,6 +24,7 @@ class TestRunner
     load File.expand_path('open_meteo_test.rb', __dir__)
     load File.expand_path('saytime_cli_test.rb', __dir__)
     load File.expand_path('weather_gps_run_test.rb', __dir__)
+    load File.expand_path('nws_condition_test.rb', __dir__)
     puts "All #{@count} tests passed."
   end
 
@@ -45,6 +46,11 @@ class TestRunner
 
   def test_weather_conditions_from_text
     assert_equal('Partly Cloudy', SaytimeWeather::WeatherConditions.from_text('Partly cloudy'))
+    assert_equal('Partly Cloudy', SaytimeWeather::WeatherConditions.from_text('Mostly Clear'),
+                 'NWS night text must not become Mostly Sunny')
+    assert_equal('Mostly Sunny', SaytimeWeather::WeatherConditions.from_text('Mostly Sunny'))
+    assert_equal('Partly Cloudy', SaytimeWeather::WeatherConditions.adjust_for_night('Mostly Sunny'))
+    assert_equal('Mainly Clear', SaytimeWeather::WeatherConditions.adjust_for_night('Sunny'))
     assert_equal('Thunderstorm', SaytimeWeather::WeatherConditions.from_text('Heavy thunderstorm'))
   end
 

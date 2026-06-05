@@ -2,6 +2,15 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.26] - 2026-06-05
+
+### Fixed
+- **NWS night conditions**: `Mostly Clear` from NWS was mapped to **Mostly Sunny** in `WeatherConditions.from_text`. Nighttime US/GPS lookups now report **Partly Cloudy** (or other non-sunny labels) after dark.
+- **NWS night icons**: When the observation icon path includes `/night/` or forecast `isDaytime` is false, **Sunny** / **Mostly Sunny** are downgraded for announcement.
+
+### Added
+- **Tests**: `nws_condition_test.rb` and `from_text` cases for Mostly Clear and `adjust_for_night`.
+
 ## [0.0.25] - 2026-06-04
 
 ### Fixed
@@ -202,6 +211,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.26]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.25...v0.0.26
 [0.0.25]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.24...v0.0.25
 [0.0.24]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.23...v0.0.24
 [0.0.23]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.22...v0.0.23

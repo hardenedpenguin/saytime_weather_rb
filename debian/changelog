@@ -1,3 +1,10 @@
+saytime-weather-rb (0.0.26-1) unstable; urgency=medium
+
+  * Fix NWS night conditions: Mostly Clear no longer announced as Mostly Sunny
+  * NWS night icons and forecast isDaytime adjust sunny wording after dark
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Thu, 05 Jun 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.25-1) unstable; urgency=medium
 
   * Fix NoMethodError when saytime/weather run with --gps and no location

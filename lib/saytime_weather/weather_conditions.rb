@@ -21,13 +21,22 @@ module SaytimeWeather
       return 'Hail' if text =~ /\bhail\b/
       return 'Foggy' if text =~ /\bfog\b|\bmist\b/
       return 'Overcast' if text =~ /overcast|cloudy.*cloudy/
-      return 'Partly Cloudy' if text =~ /partly.*cloud|partly.*sun|mostly.*cloud/
+      return 'Partly Cloudy' if text =~ /partly.*cloud|partly.*sun|mostly.*cloud|mostly.*clear/
       return 'Cloudy' if text =~ /\bcloudy\b/
-      return 'Mostly Sunny' if text =~ /mostly.*sun|mostly.*clear/
+      return 'Mostly Sunny' if text =~ /mostly.*sun/
       return 'Sunny' if text =~ /\bsunny\b|clear.*sun|sun.*clear/
       return 'Clear' if text =~ /\bclear\b/
 
       'Clear'
+    end
+
+    # NWS and similar providers may still say "sunny" in text while the icon is /night/.
+    def adjust_for_night(condition)
+      case condition
+      when 'Sunny' then 'Mainly Clear'
+      when 'Mostly Sunny' then 'Partly Cloudy'
+      else condition
+      end
     end
 
     def from_metno_symbol(symbol_code)

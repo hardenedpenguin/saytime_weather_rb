@@ -55,13 +55,13 @@ module SaytimeWeather
                 temp = (temp_c * 9.0 / 5.0) + 32.0
               end
 
+              icon = props['icon'] || ''
               condition_text = props['textDescription'] || ''
               if condition_text && !condition_text.empty?
                 condition = parse_nws_condition(condition_text)
               end
 
               unless condition
-                icon = props['icon'] || ''
                 if icon.include?('skc') || icon.include?('clear')
                   condition = 'Clear'
                 elsif icon.include?('few')
@@ -72,6 +72,8 @@ module SaytimeWeather
                   condition = 'Cloudy'
                 end
               end
+
+              condition = apply_nws_night_condition(condition, icon) if condition
 
               if @config['show_precipitation'] == 'YES'
                 precip_mm = props['precipitationLastHour'] && props['precipitationLastHour']['value']
@@ -158,6 +160,7 @@ module SaytimeWeather
                   condition_text = current['shortForecast'] || current['detailedForecast'] || ''
                   if condition_text && !condition_text.empty? && !condition
                     condition = parse_nws_condition(condition_text)
+                    condition = apply_nws_night_condition(condition, nil, is_daytime: current['isDaytime'])
                   end
                 end
               end
@@ -185,6 +188,17 @@ module SaytimeWeather
 
     def parse_nws_condition(text)
       SaytimeWeather::WeatherConditions.from_text(text)
+    end
+
+    def nws_icon_night?(icon)
+      icon.to_s.include?('/night/')
+    end
+
+    def apply_nws_night_condition(condition, icon = nil, is_daytime: nil)
+      night = is_daytime == false || (is_daytime.nil? && nws_icon_night?(icon))
+      return condition unless night
+
+      SaytimeWeather::WeatherConditions.adjust_for_night(condition)
     end
   end
 end
