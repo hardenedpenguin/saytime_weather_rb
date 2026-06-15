@@ -76,3 +76,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git diff --quiet README.md || (git add README.md && git commit -m "README: point install to ${{ github.ref_name }} release" && git push)
+
+  publish-apt-repo:
+    needs: build
+    uses: hardenedpenguin/hardenedpenguin-apt/.github/workflows/dispatch-apt-publish.yml@main
+    secrets:
+      APT_REPO_DISPATCH_TOKEN: ${{ secrets.APT_REPO_DISPATCH_TOKEN }}
