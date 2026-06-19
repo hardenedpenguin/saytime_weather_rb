@@ -20,6 +20,7 @@ module SaytimeWeather
     include WeatherSound
     include WeatherProviders
     include WeatherGps
+    include WeatherNumeric
 
     attr_reader :options, :config
 
@@ -95,8 +96,10 @@ module SaytimeWeather
 
   # Returns true on success, false on failure (does not exit).
   def run(location: nil, display_only: nil)
+      @owns_run_context = !RunContext.active?
+      RunContext.ensure_run!
       @http.verbose = @options[:verbose]
-      display_only = display_only || ARGV[1]
+      display_only = display_only || (ARGV[1] if $PROGRAM_NAME == 'weather.rb')
 
       if gps_location_enabled?
         loc = location.to_s.strip
@@ -143,11 +146,17 @@ module SaytimeWeather
 
       return true if display_only == 'v'
 
-      write_temperature_file(temp_f, temp_c)
+      unless write_temperature_file(temp_f, temp_c)
+        error('Temperature out of display range; sound file not written')
+        error("  Location: #{location_label_for_error(location)}")
+        return false
+      end
+
       process_weather_condition(condition) if @config['process_condition'] == 'YES' && condition
       true
     ensure
       @http.close if @http
+      RunContext.cleanup! if @owns_run_context
     end
 
     private
@@ -163,7 +172,7 @@ module SaytimeWeather
       lat, lon, label = resolve_location_coordinates(location)
       if lat && lon
         weather_data, provider = fetch_coordinate_weather(lat, lon, label)
-        if weather_data && weather_data[:temp] && weather_data[:condition]
+        if weather_data && valid_weather_data?(weather_data)
           @weather_data = weather_data
           return [weather_data[:temp].to_s, weather_data[:condition], provider]
         end
@@ -249,7 +258,7 @@ module SaytimeWeather
 
     def fetch_metar_with_extras(icao)
       metar_temp, metar_cond = fetch_metar_weather(icao)
-      return [nil, nil, nil] unless metar_temp && metar_cond
+      return [nil, nil, nil] unless WeatherNumeric.numeric_temp?(metar_temp) && metar_cond
 
       @weather_data = { temp: metar_temp, condition: metar_cond }
       enrich_from_airport_coordinates(icao)
@@ -392,11 +401,16 @@ module SaytimeWeather
       tmax = temp_mode == 'C' ? 60 : 150
       temp_value = temp_mode == 'C' ? temp_c : temp_f
 
-      return unless temp_value >= tmin && temp_value <= tmax
+      unless temp_value >= tmin && temp_value <= tmax
+        warn("Temperature #{temp_value}°#{temp_mode} outside display range (#{tmin}..#{tmax})") if @options[:verbose]
+        return false
+      end
 
       File.write(temp_path('temperature'), temp_value.round.to_s)
+      true
     rescue => e
       warn("Error writing temperature file: #{e.message}")
+      false
     end
   end
 end

@@ -3,16 +3,21 @@
 module SaytimeWeather
   module SaytimeConfig
     def load_config
-      config_file = Paths.config_path
-      if File.exist?(config_file)
+      config_path = @options[:config_file] || Paths.config_path
+      if @options[:config_file] && !File.exist?(@options[:config_file])
+        warn("Custom config file not found: #{@options[:config_file]}")
+      end
+
+      if File.exist?(config_path)
         begin
-          ini = Ini.parse_file(config_file)
+          ini = Ini.parse_file(config_path)
           @config = ini['weather'] if ini && ini['weather']
         rescue => e
           warn("Failed to load config file: #{e.message}")
         end
       end
 
+      @config ||= {}
       @config['Temperature_mode'] ||= 'F'
       @config['process_condition'] ||= 'YES'
       @config['saytime_play_delay'] ||= ENV.fetch('SAYTIME_PLAY_DELAY', SAYTIME_PLAY_DELAY.to_s)

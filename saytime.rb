@@ -55,8 +55,11 @@ class SaytimeScript
   end
 
   def run
+    SaytimeWeather::RunContext.begin_run!
     validate_options
     log_to_file('started')
+
+    SaytimeWeather::RunContext.clear_legacy_timezone! unless @options[:weather_enabled]
 
     weather_sound_files = process_weather(@options[:location_id])
 
@@ -75,7 +78,9 @@ class SaytimeScript
 
     if @options[:dry_run]
       info("Dry run mode - would play: #{final_sound_files}")
-      exit 0
+      status = @critical_error ? 1 : 0
+      log_to_file("finished exit=#{status}")
+      exit status
     end
 
     if final_sound_files && !final_sound_files.strip.empty?
@@ -84,15 +89,16 @@ class SaytimeScript
 
     if @options[:silent] == 0
       play_announcement(@options[:node_number], output_file)
-      cleanup_files(output_file, @options[:weather_enabled], @options[:silent])
+      File.unlink(output_file) if File.exist?(output_file)
     elsif [1, 2].include?(@options[:silent])
       info("Saved sound file to #{output_file}")
-      cleanup_files(nil, @options[:weather_enabled], @options[:silent])
     end
 
     status = @critical_error ? 1 : 0
     log_to_file("finished exit=#{status}")
     exit status
+  ensure
+    SaytimeWeather::RunContext.cleanup!
   end
 end
 

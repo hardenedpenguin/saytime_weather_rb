@@ -136,13 +136,13 @@ module SaytimeWeather
                 humidity = rh if rh && rh.is_a?(Numeric)
               end
 
-              break if temp && condition
+              break if WeatherNumeric.numeric_temp?(temp) && condition
             end
           end
         end
       end
 
-      unless temp && condition
+      unless WeatherNumeric.numeric_temp?(temp) && condition
         forecast_url = points_data['properties']['forecast']
         if forecast_url
           response = @http.get(forecast_url, SaytimeWeather::Network.timeout_long, nws_ua)
@@ -154,8 +154,9 @@ module SaytimeWeather
                 current = periods[0]
                 if current
                   forecast_temp = current['temperature']
-                  if !temp && forecast_temp && forecast_temp.is_a?(Numeric)
-                    temp = forecast_temp
+                  if !WeatherNumeric.numeric_temp?(temp) && forecast_temp.is_a?(Numeric)
+                    unit = current['temperatureUnit'].to_s.upcase
+                    temp = unit == 'C' ? (forecast_temp * 9.0 / 5.0) + 32.0 : forecast_temp
                   end
                   condition_text = current['shortForecast'] || current['detailedForecast'] || ''
                   if condition_text && !condition_text.empty? && !condition
@@ -169,7 +170,7 @@ module SaytimeWeather
         end
       end
 
-      return nil unless temp && condition
+      return nil unless WeatherNumeric.numeric_temp?(temp) && condition
 
       write_timezone_file(timezone)
 

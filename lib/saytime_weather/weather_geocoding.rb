@@ -138,7 +138,7 @@ module SaytimeWeather
       return true if location.nil? || location.to_s.empty?
       return true if coordinate_literal?(location)
 
-      location.to_s.match?(/\A[a-zA-Z0-9\s\-_.]+\z/)
+      location.to_s.match?(/\A[a-zA-Z0-9\s\-_.,]+\z/)
     end
   end
 end

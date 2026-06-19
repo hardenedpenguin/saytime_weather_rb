@@ -5,6 +5,7 @@ require 'fileutils'
 require 'tmpdir'
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'saytime_weather/run_context'
 require 'saytime_weather/saytime_playback'
 require 'saytime_weather/saytime_time'
 require 'saytime_weather/paths'
@@ -40,8 +41,9 @@ def assert(condition, msg)
   raise msg unless condition
 end
 
-h = SaytimeTimeHarness.new
-tz_file = File.join(SaytimeWeather::Paths.tmp_dir, 'timezone')
+h = SaytimeTimeHarness.new(weather_enabled: true)
+SaytimeWeather::RunContext.begin_run!
+tz_file = h.tmp_file('timezone')
 File.write(tz_file, "Europe/Paris")
 
 old_tz = ENV['TZ']
@@ -54,9 +56,13 @@ now = h.get_current_time('75001')
 assert(paris != chicago, 'test setup: Paris and Chicago hours should differ')
 assert(now.hour == paris, "location timezone file should win over ENV TZ (got #{now.hour}, expected #{paris})")
 
-File.unlink(tz_file)
-ENV.delete('TZ') unless old_tz
-ENV['TZ'] = old_tz if old_tz
+File.unlink(tz_file) if File.exist?(tz_file)
+SaytimeWeather::RunContext.cleanup!
+if old_tz
+  ENV['TZ'] = old_tz
+else
+  ENV.delete('TZ')
+end
 
 FAKE_SND = '/fake/sounds/en'
 h12 = SaytimeTimeHarness.new

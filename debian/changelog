@@ -1,3 +1,12 @@
+saytime-weather-rb (0.0.27-1) unstable; urgency=medium
+
+  * Fix 0°F falsy bug; honor saytime -c; ARGV leak; stale timezone when no weather
+  * Per-run /tmp scratch files (RunContext); NWS °C forecast conversion
+  * Open-Meteo is_day strings; unknown conditions no longer default to Clear
+  * dry-run exit on critical errors; GPS+-l warning; apply_time_aware_night
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Tue, 19 May 2026 12:00:00 -0500
+
 saytime-weather-rb (0.0.26-1) unstable; urgency=medium
 
   * Fix NWS night conditions: Mostly Clear no longer announced as Mostly Sunny

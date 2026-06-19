@@ -202,6 +202,10 @@ module SaytimeWeather
         exit 1
       end
 
+      if @options[:use_gps] && @options[:location_id] && !@options[:location_id].to_s.empty?
+        warn('Both --gps and -l were given; using -l for weather location (GPS ignored)')
+      end
+
       if @options[:custom_sound_dir] && !Dir.exist?(@options[:custom_sound_dir])
         error("Custom sound directory does not exist: #{@options[:custom_sound_dir]}")
         exit 1

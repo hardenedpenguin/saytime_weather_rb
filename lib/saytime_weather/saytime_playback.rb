@@ -3,7 +3,7 @@
 module SaytimeWeather
   module SaytimePlayback
     def tmp_file(name)
-      File.join(SaytimeWeather::Paths.tmp_dir, name)
+      RunContext.scoped_tmp_path(name)
     end
 
     def is_safe_path(file)
@@ -91,24 +91,6 @@ module SaytimeWeather
         @critical_error = true
       end
       sleep play_delay_seconds
-    end
-
-    def cleanup_files(file_to_delete, weather_enabled, silent)
-      if file_to_delete && silent == 0
-        File.unlink(file_to_delete) if File.exist?(file_to_delete)
-      end
-
-      if weather_enabled && [0, 1, 2].include?(silent)
-        weather_files = [
-          tmp_file('temperature'),
-          tmp_file('condition.ulaw'),
-          tmp_file('timezone')
-        ]
-
-        weather_files.each do |file|
-          File.unlink(file) if File.exist?(file)
-        end
-      end
     end
   end
 end

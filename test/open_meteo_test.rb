@@ -17,7 +17,9 @@ end
 h = OpenMeteoHarness.new
 
 assert_equal(0, h.open_meteo_is_day(0), 'is_day 0 must stay 0')
+assert_equal(0, h.open_meteo_is_day('0'), 'is_day string 0 must stay 0')
 assert_equal(1, h.open_meteo_is_day(1), 'is_day 1 must stay 1')
+assert_equal(1, h.open_meteo_is_day('1'), 'is_day string 1 must stay 1')
 assert_equal(1, h.open_meteo_is_day(nil), 'missing is_day defaults to 1')
 
 assert_equal('Mainly Clear', h.weather_code_to_text(1, 0), 'night code 1')

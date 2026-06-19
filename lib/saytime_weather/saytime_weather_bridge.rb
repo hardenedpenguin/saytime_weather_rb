@@ -6,11 +6,6 @@ module SaytimeWeather
       return '' unless @options[:weather_enabled]
       return '' unless weather_location_present?(location_id)
 
-      temp_file_to_clean = tmp_file('temperature')
-      weather_condition_file_to_clean = tmp_file('condition.ulaw')
-      File.unlink(temp_file_to_clean) if File.exist?(temp_file_to_clean)
-      File.unlink(weather_condition_file_to_clean) if File.exist?(weather_condition_file_to_clean)
-
       location_id = nil if gps_weather_enabled?
 
       if location_id && !location_id.empty?

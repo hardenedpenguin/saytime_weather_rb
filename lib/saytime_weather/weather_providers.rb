@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_numeric'
+
 module SaytimeWeather
   module WeatherProviders
+    include WeatherNumeric
+
     PROVIDERS = %w[openmeteo nws metno wttr 7timer].freeze
     WORLDWIDE_PROVIDERS = %w[openmeteo metno wttr 7timer].freeze
 
@@ -53,7 +57,18 @@ module SaytimeWeather
     end
 
     def valid_weather_data?(data)
-      data && data[:temp] && data[:condition]
+      WeatherNumeric.valid_weather_data?(data)
+    end
+
+    def normalize_condition(data)
+      return data unless data && data[:condition]
+
+      data[:condition] = WeatherConditions.apply_time_aware_night(
+        data[:condition],
+        timezone: data[:timezone],
+        local_time: data[:observation_time]
+      )
+      data
     end
 
     def ensure_location_timezone(lat, lon, data)
@@ -116,6 +131,7 @@ module SaytimeWeather
         data = fetch_from_provider_with_timeout(provider, lat, lon, default)
         next unless valid_weather_data?(data)
 
+        data = normalize_condition(data)
         ensure_location_timezone(lat, lon, data)
 
         if @options[:verbose]

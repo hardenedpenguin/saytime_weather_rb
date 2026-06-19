@@ -30,6 +30,8 @@ test:
 	ruby -c lib/saytime_weather/endpoints.rb
 	ruby -c lib/saytime_weather/cache.rb
 	ruby -c lib/saytime_weather/sound_index.rb
+	ruby -c lib/saytime_weather/run_context.rb
+	ruby -c lib/saytime_weather/weather_numeric.rb
 	ruby -c lib/saytime_weather/gps.rb
 	ruby -c lib/saytime_weather/http_client.rb
 	ruby -c lib/saytime_weather/constants.rb

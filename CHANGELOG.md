@@ -2,6 +2,30 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.27] - 2026-05-19
+
+### Fixed
+- **0°F weather data**: Ruby falsy `0` no longer drops valid zero-degree readings; providers use `WeatherNumeric.valid_weather_data?`.
+- **saytime `-c`**: Custom config path from `-c` / `--config` is honored when loading `saytime.ini`.
+- **ARGV leak**: Standalone `weather.rb` no longer reads `ARGV[1]` when invoked in-process from `saytime.rb`.
+- **Stale timezone**: Location timezone file is ignored when weather is disabled; legacy `/tmp/timezone` is cleared on `--no-weather`.
+- **NWS forecast units**: Forecast temperatures in °C are converted to °F when the station reports `temperatureUnit: C`.
+- **Open-Meteo `is_day`**: String values `"0"` / `"1"` from the API are handled correctly (night codes no longer treated as day).
+- **Unknown conditions**: `WeatherConditions.from_text` returns `nil` instead of defaulting to Clear for unrecognized phrases.
+- **Temperature file writes**: Out-of-range values are rejected with a verbose warning instead of writing bad data.
+- **Concurrent `/tmp` races**: Per-run scratch files (`temperature.{pid-ts}`, etc.) via `RunContext`; cleaned up on exit.
+- **dry-run exit code**: Respects `@critical_error` (non-zero when playback would fail).
+- **Geocoding**: Comma-containing location strings pass format validation (coordinate literals).
+
+### Changed
+- **GPS + `-l`**: Verbose warning when both GPS mode and an explicit location are set.
+- **Night conditions**: Centralized `apply_time_aware_night`; Met.no `_night` symbol suffixes; provider normalization polish.
+- **GPS weather**: `location_source = gps` in config enables GPS without requiring `-l` on the CLI.
+
+### Added
+- **Modules**: `RunContext`, `WeatherNumeric`.
+- **Tests**: `weather_numeric_test.rb`, `saytime_config_test.rb`; extended Open-Meteo and timezone coverage.
+
 ## [0.0.26] - 2026-06-05
 
 ### Fixed
@@ -211,6 +235,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.27]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.26...v0.0.27
 [0.0.26]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.25...v0.0.26
 [0.0.25]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.24...v0.0.25
 [0.0.24]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.23...v0.0.24

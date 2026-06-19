@@ -27,7 +27,33 @@ module SaytimeWeather
       return 'Sunny' if text =~ /\bsunny\b|clear.*sun|sun.*clear/
       return 'Clear' if text =~ /\bclear\b/
 
-      'Clear'
+      nil
+    end
+
+    def apply_time_aware_night(condition, timezone: nil, local_time: nil)
+      return condition unless condition
+
+      night = night_from_local_time(local_time) || evening_in_timezone?(timezone)
+      night ? adjust_for_night(condition) : condition
+    end
+
+    def night_from_local_time(local_time)
+      m = local_time.to_s.match(/T(\d{2}):/)
+      m && m[1].to_i >= 20
+    end
+
+    def evening_in_timezone?(timezone)
+      tz = timezone.to_s.strip
+      return false if tz.empty?
+
+      sanitized = tz.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
+      return false if sanitized.empty? || sanitized != tz
+
+      hour = nil
+      IO.popen({ 'TZ' => sanitized }, ['date', '+%H']) { |io| hour = io.read.strip.to_i }
+      $?.success? && hour >= 20
+    rescue
+      false
     end
 
     # NWS and similar providers may still say "sunny" in text while the icon is /night/.
@@ -43,6 +69,8 @@ module SaytimeWeather
       return nil unless symbol_code && !symbol_code.to_s.empty?
 
       s = symbol_code.to_s.downcase
+      return 'Mainly Clear' if s.include?('clearsky_night')
+      return 'Partly Cloudy' if s.include?('fair_night')
       return 'Thunderstorm' if s.include?('thunder')
       return 'Sleet' if s.include?('sleet')
       return 'Foggy' if s.include?('fog')
@@ -96,7 +124,7 @@ module SaytimeWeather
       return 'Partly Cloudy' if metar =~ /\bSCT\d{3}\b/
       return 'Clear' if metar =~ /\b(FEW\d{3}|CLR|SKC)\b/
 
-      'Clear'
+      nil
     end
   end
 end

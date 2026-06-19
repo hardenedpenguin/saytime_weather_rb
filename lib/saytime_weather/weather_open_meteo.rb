@@ -94,7 +94,8 @@ module SaytimeWeather
     end
 
     def open_meteo_is_day(raw)
-      return raw if raw == 0 || raw == 1
+      return 0 if raw.to_s == '0' || raw == 0
+      return 1 if raw.to_s == '1' || raw == 1
 
       1
     end

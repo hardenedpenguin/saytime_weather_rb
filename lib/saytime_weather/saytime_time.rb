@@ -19,6 +19,7 @@ module SaytimeWeather
 
     def read_location_timezone(location_id)
       return nil unless location_id
+      return nil unless @options[:weather_enabled]
 
       timezone_file = tmp_file('timezone')
       return nil unless File.exist?(timezone_file)

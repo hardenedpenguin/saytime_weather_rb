@@ -7,6 +7,8 @@ module SaytimeWeather
 end
 
 require_relative 'saytime_weather/constants'
+require_relative 'saytime_weather/run_context'
+require_relative 'saytime_weather/weather_numeric'
 require_relative 'saytime_weather/cache'
 require_relative 'saytime_weather/gps'
 require_relative 'saytime_weather/ini'
