@@ -13,7 +13,7 @@ module SaytimeWeather
     end
 
     def temp_path(name)
-      RunContext.scoped_tmp_path(name)
+      SaytimeWeather::RunContext.scoped_tmp_path(name)
     end
 
     def weather_sound_dir

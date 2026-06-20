@@ -2,6 +2,11 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.28] - 2026-05-19
+
+### Fixed
+- **Standalone weather.rb**: `weather_entry.rb` now loads `RunContext` and `WeatherNumeric`; fixes `NameError` on `/usr/sbin/weather.rb` (NodeStatus and cron paths that invoke weather directly).
+
 ## [0.0.27] - 2026-05-19
 
 ### Fixed
@@ -235,6 +240,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.28]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.27...v0.0.28
 [0.0.27]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.26...v0.0.27
 [0.0.26]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.25...v0.0.26
 [0.0.25]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.24...v0.0.25

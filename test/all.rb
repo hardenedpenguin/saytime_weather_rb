@@ -27,6 +27,7 @@ class TestRunner
     load File.expand_path('nws_condition_test.rb', __dir__)
     load File.expand_path('weather_numeric_test.rb', __dir__)
     load File.expand_path('saytime_config_test.rb', __dir__)
+    load File.expand_path('weather_entry_test.rb', __dir__)
     puts "All #{@count} tests passed."
   end
 

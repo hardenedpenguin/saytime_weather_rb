@@ -96,8 +96,8 @@ module SaytimeWeather
 
   # Returns true on success, false on failure (does not exit).
   def run(location: nil, display_only: nil)
-      @owns_run_context = !RunContext.active?
-      RunContext.ensure_run!
+      @owns_run_context = !SaytimeWeather::RunContext.active?
+      SaytimeWeather::RunContext.ensure_run!
       @http.verbose = @options[:verbose]
       display_only = display_only || (ARGV[1] if $PROGRAM_NAME == 'weather.rb')
 
@@ -156,7 +156,7 @@ module SaytimeWeather
       true
     ensure
       @http.close if @http
-      RunContext.cleanup! if @owns_run_context
+      SaytimeWeather::RunContext.cleanup! if @owns_run_context
     end
 
     private

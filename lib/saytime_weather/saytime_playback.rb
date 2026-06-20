@@ -3,7 +3,7 @@
 module SaytimeWeather
   module SaytimePlayback
     def tmp_file(name)
-      RunContext.scoped_tmp_path(name)
+      SaytimeWeather::RunContext.scoped_tmp_path(name)
     end
 
     def is_safe_path(file)
