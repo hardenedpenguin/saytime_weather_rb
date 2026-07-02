@@ -118,6 +118,54 @@ precip_trace_mm = 0.10
 - **weatherapi_key**: API key for WeatherAPI.com (required when `weather_provider = weatherapi`). Also accepted as `WEATHERAPI_KEY`.
 - **weather_provider_random** (default: `YES`): spread postal-code lookups across eligible providers; Open-Meteo (or your `weather_provider` if set) is tried last. `weatherapi` joins the rotation only when a key is configured. Set `NO` and set `weather_provider` to pin a single provider. Does not affect airport METAR lookups unless `weather_provider = weatherapi`.
 
+### Comparing providers
+
+Each provider pulls from a different data source, model, and update schedule. **Temperature and condition text will not match exactly** even for the same coordinates — that is normal, not a bug. Use the table below as a realistic snapshot; your location and time of day will differ.
+
+**Sample results** (2026-07-02, south Houston area — postal `77511` and `--gps` at `29.4214, -95.2562`; each provider pinned with `weather_provider_random = NO`):
+
+| Provider | Temp | Condition | Wind | API key | Notes |
+|----------|------|-----------|------|---------|-------|
+| **openmeteo** | 85°F | Mostly Sunny | 6 mph ESE | No | Free; good worldwide default and timezone fallback |
+| **nws** | 90°F | Clear | 10 mph ESE | No | US only; official NWS observation/forecast blend |
+| **metno** | 86°F | Light Rain | 8 mph SSE | No | Free; MET Norway (Yr); worldwide |
+| **wttr** | 87°F | Partly Cloudy | 10 mph SE | No | Free; wttr.in; can be slower or rate-limited |
+| **7timer** | 88°F | Light Rain | 4 mph S | No | Free; astro-oriented model; coarser wind |
+| **weatherapi** | 89°F | Light Rain | 11 mph SE | Yes | Direct postal/airport lookup when pinned; coords with `--gps` |
+| **METAR** (DFW) | 93°F | Partly Cloudy | 9 mph SE | No | Airport IATA/ICAO only; live aviation observation |
+
+GPS runs at the same site returned the same ballpark values (for example openmeteo and NWS both still 85°F / 90°F; weatherapi 89°F with coordinates instead of direct postal lookup).
+
+**Why results differ**
+
+- **Observation vs model**: NWS and METAR use station reports; others use gridded forecast or blended “current” fields that may lag or smooth conditions.
+- **Location resolution**: Postal codes are geocoded to a centroid (except WeatherAPI direct lookup); GPS uses your receiver fix — usually within ~1 km of a nearby ZIP, but not identical.
+- **Condition wording**: Providers use different phrase lists (“Clear”, “Mostly Sunny”, “Partly Cloudy”, “Light Rain”) and day/night rules; light precipitation near the threshold may appear on one source and not another.
+- **Timing**: Requests made seconds apart can hit different cache or observation times; a few degrees and one condition step is typical.
+
+**Choosing a provider**
+
+| Goal | Suggestion |
+|------|------------|
+| **US repeater, simplest free setup** | `weather_provider = nws` or leave random on (NWS tried for US coordinates) |
+| **Worldwide, no API key** | `weather_provider = openmeteo` or random rotation |
+| **Airport / aviation accuracy** | Use IATA/ICAO location (METAR path) — not a postal code near the airport |
+| **Mobile / GPS site** | `--gps` or `location_source = gps`; any coordinate-based provider works |
+| **Avoid geocoding (postal)** | `weather_provider = weatherapi` with `weatherapi_key` |
+| **Spread load / redundancy** | `weather_provider_random = YES` (default); Open-Meteo is always the final fallback |
+
+To compare providers on your node, pin each one and run display-only mode:
+
+```bash
+# Example: test Open-Meteo for postal 77511
+sudo /usr/sbin/weather.rb -v 77511 v
+
+# Same providers with GPS (requires gpsd fix)
+sudo /usr/sbin/weather.rb -v --gps v
+```
+
+Use a temporary config with `weather_provider = <name>` and `weather_provider_random = NO` to test one source at a time without editing your live `weather.ini`.
+
 ### Additional Weather Data
 
 The following options control display of additional weather information. Units are automatically selected based on `Temperature_mode`.
