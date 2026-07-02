@@ -3,8 +3,7 @@
 module SaytimeWeather
   module SaytimeTime
     def get_current_time(location_id)
-      timezone = read_location_timezone(location_id)
-      timezone = ENV['TZ'].strip if timezone.to_s.empty? && ENV['TZ'] && !ENV['TZ'].empty?
+      timezone = env_timezone_override || read_location_timezone(location_id)
 
       if timezone && !timezone.empty?
         sanitized_tz = timezone.gsub(/[^a-zA-Z0-9\/_\-+: ]/, '')
@@ -15,6 +14,14 @@ module SaytimeWeather
       end
 
       Time.now
+    end
+
+    def env_timezone_override
+      tz = ENV['TZ']
+      tz = tz.strip if tz
+      return nil if tz.nil? || tz.empty?
+
+      tz
     end
 
     def read_location_timezone(location_id)

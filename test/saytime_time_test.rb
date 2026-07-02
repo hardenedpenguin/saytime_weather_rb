@@ -54,7 +54,11 @@ chicago = IO.popen({ 'TZ' => 'America/Chicago' }, ['date', '+%H']).read.strip.to
 now = h.get_current_time('75001')
 
 assert(paris != chicago, 'test setup: Paris and Chicago hours should differ')
-assert(now.hour == paris, "location timezone file should win over ENV TZ (got #{now.hour}, expected #{paris})")
+assert(now.hour == chicago, "ENV TZ should win over location timezone file (got #{now.hour}, expected #{chicago})")
+
+ENV.delete('TZ')
+now_local = h.get_current_time('75001')
+assert(now_local.hour == paris, "location timezone file used when TZ unset (got #{now_local.hour}, expected #{paris})")
 
 File.unlink(tz_file) if File.exist?(tz_file)
 SaytimeWeather::RunContext.cleanup!

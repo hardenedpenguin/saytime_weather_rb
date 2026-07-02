@@ -233,13 +233,13 @@ Optional `weather.ini` keys: `gpsd_host`, `gpsd_port`, `gps_min_mode`, `gps_max_
 
 | Situation | What time is announced |
 |-----------|------------------------|
-| **Weather on**, location timezone file written (`/tmp/timezone`) | Time in the **location’s timezone** (postal, coordinates, GPS, or airport via Open-Meteo/NWS). |
-| **`TZ` is set** and no location timezone file | Time in that `TZ` value. |
-| **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK) | **Airport timezone** when Our Airports has coordinates (via Open-Meteo); otherwise **system local time**. |
-| **`--no-weather`** | **System local time** (weather is not run, so no location timezone is available). |
-| **Weather on but no valid timezone** (e.g. weather failed, or timezone file missing/invalid) | **`TZ` if set**, otherwise **system local time**. |
+| **`TZ` is set** (e.g. `TZ=UTC`) | Time in that zone; overrides location timezone from weather/GPS. |
+| **Weather on**, `TZ` unset, location timezone file written | Time in the **location’s timezone** (postal, coordinates, GPS, or airport). |
+| **Weather on, location = ICAO or IATA** (e.g. KDFW, JFK), `TZ` unset | **Airport timezone** when Our Airports has coordinates; otherwise **system local time**. |
+| **`--no-weather`**, `TZ` unset | **System local time**. |
+| **Weather on but no valid timezone**, `TZ` unset | **System local time**. |
 
-Summary: when weather succeeds, the location timezone file takes priority over `TZ`. With `--no-weather`, only `TZ` or system local time applies.
+Summary: set `TZ` when you want UTC or another zone regardless of GPS/weather location. Leave `TZ` unset to announce time in the weather location’s timezone.
 
 Run with `--help` for complete option list.
 
