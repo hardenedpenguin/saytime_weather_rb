@@ -35,6 +35,9 @@ Optional **environment variables** (defaults suit ASL3 / typical Linux installs)
 | Variable | Purpose |
 |----------|---------|
 | `SAYTIME_TMP` | Directory for temperature/timezone scratch files (default `/tmp`) |
+| `SAYTIME_FILE_OWNER` | When running as root, `-s 1` / `-s 2` save output is `chown`ed to this user (default `asterisk`) |
+
+Cron and DTMF (`*C1`) normally use default **silent=0** (play only). Scratch files are removed after each run so a root cron job does not leave root-owned `/tmp` files that block the `asterisk` user. Use **`-s 1`** or **`-s 2`** only when you intentionally want `/tmp/current-time.ulaw` kept.
 | `WEATHER_CONFIG` | Path to `weather.ini` (default `/etc/asterisk/local/weather.ini`) |
 | `SAYTIME_SOUND_ROOT` | Base Asterisk English sounds directory (default `/usr/share/asterisk/sounds/en`) |
 | `ASTERISK_BIN` | Asterisk binary for playback (default `/usr/sbin/asterisk`) |

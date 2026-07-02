@@ -2,6 +2,15 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.29] - 2026-07-01
+
+### Fixed
+- **Root cron vs DTMF**: Scratch files are always cleaned up after default playback (`-s 0`); legacy fixed `/tmp` names (`temperature`, `timezone`, `current-time.ulaw`, etc.) are removed at run start so root-owned leftovers no longer block the `asterisk` user.
+- **Save mode (`-s 1` / `-s 2`)**: Output is written to stable `/tmp/current-time.ulaw` and preserved through cleanup; when run as root, file ownership is set to `asterisk` (override with `SAYTIME_FILE_OWNER`).
+
+### Added
+- **Tests**: `run_context_test.rb` covers legacy cleanup, scoped scratch removal, and save-mode exceptions.
+
 ## [0.0.28] - 2026-05-19
 
 ### Fixed
@@ -240,6 +249,7 @@ All notable changes to saytime-weather-rb are documented here.
 
 - Initial Debian package release; Ruby implementation with no external gem dependencies.
 
+[0.0.29]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.28...v0.0.29
 [0.0.28]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.27...v0.0.28
 [0.0.27]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.26...v0.0.27
 [0.0.26]: https://github.com/hardenedpenguin/saytime_weather_rb/compare/v0.0.25...v0.0.26

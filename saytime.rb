@@ -56,10 +56,9 @@ class SaytimeScript
 
   def run
     SaytimeWeather::RunContext.begin_run!
+    SaytimeWeather::RunContext.clear_legacy_scratch!
     validate_options
     log_to_file('started')
-
-    SaytimeWeather::RunContext.clear_legacy_timezone! unless @options[:weather_enabled]
 
     weather_sound_files = process_weather(@options[:location_id])
 
@@ -73,7 +72,7 @@ class SaytimeScript
         process_time(now, @options[:use_24hour])
       end
 
-    output_file = tmp_file('current-time.ulaw')
+    output_file = save_output_requested? ? persistent_output_file : tmp_file('current-time.ulaw')
     final_sound_files = combine_sound_files(time_sound_files, weather_sound_files)
 
     if @options[:dry_run]
@@ -89,8 +88,8 @@ class SaytimeScript
 
     if @options[:silent] == 0
       play_announcement(@options[:node_number], output_file)
-      File.unlink(output_file) if File.exist?(output_file)
-    elsif [1, 2].include?(@options[:silent])
+    elsif save_output_requested?
+      SaytimeWeather::RunContext.apply_runtime_owner(output_file)
       info("Saved sound file to #{output_file}")
     end
 
@@ -98,7 +97,17 @@ class SaytimeScript
     log_to_file("finished exit=#{status}")
     exit status
   ensure
-    SaytimeWeather::RunContext.cleanup!
+    SaytimeWeather::RunContext.cleanup!(except: save_output_requested? ? [persistent_output_file] : [])
+  end
+
+  private
+
+  def save_output_requested?
+    [1, 2].include?(@options[:silent])
+  end
+
+  def persistent_output_file
+    SaytimeWeather::RunContext.persistent_scratch_path('current-time.ulaw')
   end
 end
 

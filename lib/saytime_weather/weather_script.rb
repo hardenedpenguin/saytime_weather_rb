@@ -98,6 +98,7 @@ module SaytimeWeather
   def run(location: nil, display_only: nil)
       @owns_run_context = !SaytimeWeather::RunContext.active?
       SaytimeWeather::RunContext.ensure_run!
+      SaytimeWeather::RunContext.clear_legacy_scratch! if @owns_run_context
       @http.verbose = @options[:verbose]
       display_only = display_only || (ARGV[1] if $PROGRAM_NAME == 'weather.rb')
 
