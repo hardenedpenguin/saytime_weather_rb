@@ -39,6 +39,7 @@ Optional **environment variables** (defaults suit ASL3 / typical Linux installs)
 
 Cron and DTMF (`*C1`) normally use default **silent=0** (play only). Scratch files are removed after each run so a root cron job does not leave root-owned `/tmp` files that block the `asterisk` user. Use **`-s 1`** or **`-s 2`** only when you intentionally want `/tmp/current-time.ulaw` kept.
 | `WEATHER_CONFIG` | Path to `weather.ini` (default `/etc/asterisk/local/weather.ini`) |
+| `WEATHERAPI_KEY` | WeatherAPI.com key when `weather_provider = weatherapi` (overrides ini if `weatherapi_key` is unset) |
 | `SAYTIME_SOUND_ROOT` | Base Asterisk English sounds directory (default `/usr/share/asterisk/sounds/en`) |
 | `ASTERISK_BIN` | Asterisk binary for playback (default `/usr/sbin/asterisk`) |
 
@@ -46,7 +47,7 @@ Optional **`weather.ini`** keys under `[weather]` (see the commented template at
 
 | Area | Keys |
 |------|------|
-| **Providers** | `weather_provider` (optional), `weather_provider_random`, `weather_provider_random_max_attempts`, `http_probe_timeout` |
+| **Providers** | `weather_provider` (optional), `weather_provider_random`, `weather_provider_random_max_attempts`, `http_probe_timeout`, `weatherapi_key` |
 | **Location** | `location_source` (`postal` or `gps`), `gpsd_host`, `gpsd_port`, `gps_min_mode`, `gps_max_age_seconds`, `gps_fallback_location`, … |
 | **Performance** | `geocode_cache_max_age_seconds`, `timezone_cache_max_age_seconds`, `saytime_play_delay` |
 | **HTTP / airports** | `http_timeout_short`, `http_timeout_long`, `nominatim_delay`, `http_get_retries`, `http_get_retry_sleep`, `airports_cache_max_age_seconds`, `airports_data_url` |
@@ -113,7 +114,9 @@ precip_trace_mm = 0.10
   - `metno`: worldwide, no API key (MET Norway / Yr)
   - `wttr`: worldwide, no API key (wttr.in)
   - `7timer`: worldwide, no API key (7Timer!)
-- **weather_provider_random** (default: `YES`): spread postal-code lookups across eligible providers; Open-Meteo (or your `weather_provider` if set) is tried last. Set `NO` and set `weather_provider` to pin a single provider. Does not affect airport METAR lookups.
+  - `weatherapi`: worldwide; requires `weatherapi_key` in `weather.ini` or `WEATHERAPI_KEY` in the environment. When selected, postal codes and airport codes are sent directly to WeatherAPI (skips Nominatim geocoding and METAR).
+- **weatherapi_key**: API key for WeatherAPI.com (required when `weather_provider = weatherapi`). Also accepted as `WEATHERAPI_KEY`.
+- **weather_provider_random** (default: `YES`): spread postal-code lookups across eligible providers; Open-Meteo (or your `weather_provider` if set) is tried last. `weatherapi` joins the rotation only when a key is configured. Set `NO` and set `weather_provider` to pin a single provider. Does not affect airport METAR lookups unless `weather_provider = weatherapi`.
 
 ### Additional Weather Data
 

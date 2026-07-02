@@ -1,0 +1,25 @@
+{
+  "location": {
+    "name": "League City",
+    "region": "Texas",
+    "country": "United States of America",
+    "lat": 29.51,
+    "lon": -95.09,
+    "tz_id": "America/Chicago",
+    "localtime": "2026-05-19 14:30"
+  },
+  "current": {
+    "temp_f": 82.4,
+    "temp_c": 28.0,
+    "is_day": 1,
+    "condition": {
+      "text": "Partly cloudy"
+    },
+    "wind_mph": 12.5,
+    "wind_degree": 180,
+    "gust_mph": 18.0,
+    "precip_mm": 0.0,
+    "humidity": 65,
+    "pressure_mb": 1013.0
+  }
+}

@@ -17,6 +17,7 @@ module SaytimeWeather
     include WeatherMetNo
     include WeatherWttr
     include Weather7Timer
+    include WeatherWeatherapi
     include WeatherSound
     include WeatherProviders
     include WeatherGps
@@ -166,6 +167,10 @@ module SaytimeWeather
       @weather_data = {}
       @resolved_metar = nil
 
+      if (direct = try_weatherapi_direct_location(location))
+        return direct
+      end
+
       if (metar = try_metar_resolution(location))
         return metar
       end
@@ -222,7 +227,40 @@ module SaytimeWeather
       [nil, nil, location]
     end
 
+    def try_weatherapi_direct_location(location)
+      return nil unless weatherapi_direct_lookup?
+      return nil if gps_location_enabled?
+      return nil if location.nil? || location.to_s.empty?
+      return nil if coordinate_literal?(location)
+
+      q = weatherapi_query_for_location(location)
+      return nil unless q
+
+      if @options[:verbose]
+        warn("WeatherAPI direct lookup for #{location} (q=#{q})")
+      end
+
+      data = fetch_weather_weatherapi(query: q)
+      return nil unless valid_weather_data?(data)
+
+      data = normalize_condition(data)
+      lat = data[:lat]
+      lon = data[:lon]
+      if lat.is_a?(Numeric) && lon.is_a?(Numeric)
+        ensure_location_timezone(lat, lon, data)
+      elsif data[:timezone] && !data[:timezone].to_s.empty?
+        write_timezone_file(data[:timezone])
+      end
+
+      @weather_data = data
+      if @options[:verbose]
+        warn('Weather from WEATHERAPI (direct location lookup)')
+      end
+      [data[:temp].to_s, data[:condition], 'weatherapi']
+    end
+
     def try_metar_resolution(location)
+      return nil if weatherapi_direct_lookup?
       return nil if gps_location_enabled?
       return nil if location.nil? || location.to_s.empty?
       return nil if coordinate_literal?(location)

@@ -110,6 +110,7 @@ module SaytimeWeather
         ; geocode_cache_max_age_seconds = 2592000
         ; timezone_cache_max_age_seconds = 604800
         ; weather_provider_random_max_attempts = 3
+        ; weatherapi_key = YOUR_KEY_HERE
         ; saytime_play_delay = 5
         ; airports_cache_max_age_seconds = 604800
         ; airports_data_url = https://ourairports.com/data/airports.csv
@@ -126,9 +127,15 @@ module SaytimeWeather
       end
 
       provider = @config['weather_provider'].to_s.downcase
-      unless %w[openmeteo nws metno wttr 7timer].include?(provider)
+      unless %w[openmeteo nws metno wttr 7timer weatherapi].include?(provider)
         warn("Invalid weather_provider: #{@config['weather_provider']}, using default (openmeteo)")
         @config['weather_provider'] = 'openmeteo'
+        provider = 'openmeteo'
+      end
+
+      if provider == 'weatherapi' && !weatherapi_key_configured?
+        error('weather_provider is weatherapi but weatherapi_key (or WEATHERAPI_KEY) is not set')
+        exit 1
       end
 
       source = @config['location_source'].to_s.strip.downcase
@@ -136,6 +143,12 @@ module SaytimeWeather
         warn("Invalid location_source: #{@config['location_source']}, using default (postal)")
         @config['location_source'] = 'postal'
       end
+    end
+
+    def weatherapi_key_configured?
+      key = @config['weatherapi_key'].to_s.strip
+      key = ENV['WEATHERAPI_KEY'].to_s.strip if key.empty?
+      !key.empty?
     end
   end
 end

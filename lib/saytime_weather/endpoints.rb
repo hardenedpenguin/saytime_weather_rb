@@ -10,6 +10,7 @@ module SaytimeWeather
     MET_NO_LOCATIONFORECAST = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
     WTTR_IN = 'https://wttr.in'
     SEVENTIMER_API = 'https://www.7timer.info/bin/api.pl'
+    WEATHERAPI_CURRENT = 'https://api.weatherapi.com/v1/current.json'
     AVIATION_METAR = 'https://aviationweather.gov/api/data/metar'
     NOAA_METAR_STATION = 'https://tgftp.nws.noaa.gov/data/observations/metar/stations'
 
@@ -42,6 +43,12 @@ module SaytimeWeather
 
     def seventimer_civil_url(lat, lon)
       "#{SEVENTIMER_API}?lon=#{lon}&lat=#{lat}&product=civil&output=json"
+    end
+
+    def weatherapi_current_url(api_key, query)
+      key = URI.encode_www_form_component(api_key.to_s)
+      q = URI.encode_www_form_component(query.to_s)
+      "#{WEATHERAPI_CURRENT}?key=#{key}&q=#{q}"
     end
 
     def nws_points_url(lat, lon)

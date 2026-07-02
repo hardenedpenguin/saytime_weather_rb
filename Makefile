@@ -53,6 +53,7 @@ test:
 	ruby -c lib/saytime_weather/weather_metno.rb
 	ruby -c lib/saytime_weather/weather_wttr.rb
 	ruby -c lib/saytime_weather/weather_7timer.rb
+	ruby -c lib/saytime_weather/weather_weatherapi.rb
 	ruby -c lib/saytime_weather/weather_conditions.rb
 	ruby -c lib/saytime_weather/weather_providers.rb
 	ruby -c lib/saytime_weather/weather_script.rb

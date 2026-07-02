@@ -6,7 +6,7 @@ module SaytimeWeather
   module WeatherProviders
     include WeatherNumeric
 
-    PROVIDERS = %w[openmeteo nws metno wttr 7timer].freeze
+    PROVIDERS = %w[openmeteo nws metno wttr 7timer weatherapi].freeze
     WORLDWIDE_PROVIDERS = %w[openmeteo metno wttr 7timer].freeze
 
     def provider_random_enabled?
@@ -37,6 +37,7 @@ module SaytimeWeather
 
     def eligible_providers(lat, lon)
       list = WORLDWIDE_PROVIDERS.dup
+      list.unshift('weatherapi') if weatherapi_available?
       list.unshift('nws') if us_coordinates?(lat, lon)
       list
     end
@@ -51,6 +52,8 @@ module SaytimeWeather
         fetch_weather_wttr(lat, lon)
       when '7timer'
         fetch_weather_7timer(lat, lon)
+      when 'weatherapi'
+        fetch_weather_weatherapi(lat, lon)
       else
         fetch_weather_openmeteo(lat, lon)
       end
@@ -113,6 +116,7 @@ module SaytimeWeather
 
     def sanitize_try_order(order, lat, lon)
       order = order.reject { |p| p == 'nws' } unless us_coordinates?(lat, lon)
+      order = order.reject { |p| p == 'weatherapi' } unless weatherapi_available?
       order << 'openmeteo' unless order.include?('openmeteo')
       order.uniq
     end

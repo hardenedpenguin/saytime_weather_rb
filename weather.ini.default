@@ -52,7 +52,8 @@ default_country = us
 ;              Note: requires a descriptive User-Agent; this app provides one by default
 ;   wttr:      Free, no API key, worldwide coverage (wttr.in)
 ;   7timer:    Free, no API key, worldwide coverage (7Timer!)
-; Valid values: openmeteo, nws, metno, wttr, 7timer
+;   weatherapi: Worldwide coverage (WeatherAPI.com); requires weatherapi_key below
+; Valid values: openmeteo, nws, metno, wttr, 7timer, weatherapi
 ; When omitted, Open-Meteo is the fallback tried last during rotation.
 ; weather_provider = openmeteo
 
@@ -65,6 +66,10 @@ default_country = us
 ; Valid values: YES, NO
 ; Default: YES
 weather_provider_random = YES
+
+; WeatherAPI.com API key (required when weather_provider = weatherapi).
+; May also be set via WEATHERAPI_KEY environment variable.
+; weatherapi_key = YOUR_KEY_HERE
 
 ; ============================================================================
 ; ADDITIONAL WEATHER DATA

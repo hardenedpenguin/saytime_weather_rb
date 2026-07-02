@@ -2,6 +2,14 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.30] - 2026-05-19
+
+### Added
+- **WeatherAPI provider**: Set `weather_provider = weatherapi` with `weatherapi_key` (or `WEATHERAPI_KEY`) for worldwide current weather from [WeatherAPI.com](https://www.weatherapi.com/). When WeatherAPI is the configured provider, postal codes and airport codes are looked up directly (no Nominatim geocoding; METAR is skipped for IATA/ICAO). With `weather_provider_random = YES`, WeatherAPI joins the rotation only when a key is present.
+
+### Fixed
+- **saytime timezone**: `ENV['TZ']` again overrides location timezone from weather (restores correct UTC announcements when `TZ=UTC` is set with GPS/postal location).
+
 ## [0.0.29] - 2026-07-01
 
 ### Fixed
