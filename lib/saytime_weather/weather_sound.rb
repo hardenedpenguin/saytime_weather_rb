@@ -50,11 +50,6 @@ module SaytimeWeather
         end
       end
 
-      if condition_files.empty?
-        %w[clear sunny fair].find { |d| File.exist?(file = "#{weather_sound_dir}/#{d}.ulaw") && condition_files << file }
-      end
-
-      buf = HTTP_BUFFER_SIZE
       if condition_files.any?
         File.open(temp_path('condition.ulaw'), 'wb') do |out|
           condition_files.each do |file|

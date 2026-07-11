@@ -13,6 +13,16 @@ require 'saytime_weather/weather_entry'
 SaytimeWeather.root = _package
 
 if __FILE__ == $PROGRAM_NAME
-  result = SaytimeWeather::WeatherScript.new.run
-  exit(result == :usage ? 0 : (result ? 0 : 1))
+  begin
+    Dir.chdir(SaytimeWeather::Paths.tmp_dir)
+  rescue
+    nil
+  end
+  begin
+    result = SaytimeWeather::WeatherScript.new.run
+    exit(result == :usage ? 0 : (result ? 0 : 1))
+  rescue SaytimeWeather::ConfigError => e
+    $stderr.puts "ERROR: #{e.message}"
+    exit 1
+  end
 end

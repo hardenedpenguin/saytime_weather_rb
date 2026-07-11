@@ -55,6 +55,11 @@ class SaytimeScript
   end
 
   def run
+    begin
+      Dir.chdir(SaytimeWeather::Paths.tmp_dir)
+    rescue
+      nil
+    end
     SaytimeWeather::RunContext.begin_run!
     SaytimeWeather::RunContext.clear_legacy_scratch!
     validate_options

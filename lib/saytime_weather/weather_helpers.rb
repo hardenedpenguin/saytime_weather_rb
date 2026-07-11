@@ -17,7 +17,9 @@ module SaytimeWeather
     end
 
     def weather_sound_dir
-      SaytimeWeather::Paths.weather_sound_dir
+      base = @options[:custom_sound_dir].to_s.strip
+      base = Paths.asterisk_sounds_en if base.empty?
+      File.join(base, 'wx')
     end
 
     def safe_decode_json(content)

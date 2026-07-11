@@ -44,6 +44,7 @@ test:
 	ruby -c lib/saytime_weather/saytime_weather_bridge.rb
 	ruby -c lib/saytime_weather/weather_helpers.rb
 	ruby -c lib/saytime_weather/weather_units.rb
+	ruby -c lib/saytime_weather/config_error.rb
 	ruby -c lib/saytime_weather/weather_config.rb
 	ruby -c lib/saytime_weather/weather_geocoding.rb
 	ruby -c lib/saytime_weather/weather_airports.rb

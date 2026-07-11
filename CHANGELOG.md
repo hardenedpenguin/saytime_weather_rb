@@ -2,6 +2,19 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.31] - 2026-07-11
+
+### Fixed
+- **`--sound-dir`**: Weather condition `.ulaw` assembly now uses the custom sound directory’s `wx/` folder (matches time/weather announcement paths).
+- **Condition audio**: Removed misleading clear/sunny fallback when no wx file matches the reported condition.
+- **Config errors**: Invalid `weather.ini` (e.g. `weatherapi` without a key) raises `ConfigError` instead of `exit` when weather runs in-process from `saytime.rb`.
+- **Open-Meteo**: Unmapped WMO weather codes no longer produce a bogus “Unknown” condition; provider rotation continues.
+- **`app_rpt cmd` CWD**: `saytime.rb` and `weather.rb` change working directory to `SAYTIME_TMP` (default `/tmp`) at startup.
+
+### Added
+- **WeatherAPI HTTP errors**: Distinct messages for 401/403 from WeatherAPI.com.
+- **Tests**: `weather_sound_test.rb`, `weather_config_test.rb`; extended numeric/units coverage.
+
 ## [0.0.30] - 2026-05-19
 
 ### Added

@@ -1,3 +1,12 @@
+saytime-weather-rb (0.0.31-1) unstable; urgency=medium
+
+  * Fix --sound-dir for wx condition audio; remove misleading clear/sunny fallback
+  * ConfigError for bad weather.ini when weather runs in-process from saytime
+  * Open-Meteo unmapped codes no longer yield Unknown; chdir /tmp at startup
+  * WeatherAPI 401/403 error messages; shared mph_to_ms in weather_units
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sat, 11 Jul 2026 18:52:00 -0500
+
 saytime-weather-rb (0.0.30-1) unstable; urgency=medium
 
   * Add WeatherAPI.com provider (weatherapi_key / WEATHERAPI_KEY); direct postal

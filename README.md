@@ -247,6 +247,8 @@ TZ=UTC /usr/sbin/saytime.rb -l 75001 -n 123456 --no-weather  # UTC time
 
 Required: `-n, --node_number=NUM`. `-l, --location_id=ID` is required when weather is enabled unless GPS is used.
 
+If weather lookup fails, saytime still announces **time only** when possible but exits with status **1** so cron or monitoring can detect the failure.
+
 Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FILE`, `--gps`, `-v, --verbose`, `--dry-run`, `--no-weather`, `--weather-subprocess`
 
 ### GPS location

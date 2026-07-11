@@ -8,8 +8,13 @@ module SaytimeWeather
       !val.nil? && val.is_a?(Numeric)
     end
 
+    def valid_condition?(condition)
+      text = condition.to_s.strip
+      !text.empty? && text != 'Unknown'
+    end
+
     def valid_weather_data?(data)
-      data && numeric_temp?(data[:temp]) && data[:condition] && !data[:condition].to_s.empty?
+      data && numeric_temp?(data[:temp]) && valid_condition?(data[:condition])
     end
   end
 end

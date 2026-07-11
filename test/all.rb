@@ -23,6 +23,8 @@ class TestRunner
     load File.expand_path('geocoding_config_test.rb', __dir__)
     load File.expand_path('open_meteo_test.rb', __dir__)
     load File.expand_path('weatherapi_test.rb', __dir__)
+    load File.expand_path('weather_sound_test.rb', __dir__)
+    load File.expand_path('weather_config_test.rb', __dir__)
     load File.expand_path('saytime_cli_test.rb', __dir__)
     load File.expand_path('weather_gps_run_test.rb', __dir__)
     load File.expand_path('nws_condition_test.rb', __dir__)
@@ -78,6 +80,8 @@ class TestRunner
     assert_equal(32, mod.ms_to_mph(14.3))
     assert_equal(1.0, mod.mm_to_inches(25.4))
     assert_equal('NE', mod.wind_direction_to_cardinal(45))
+    mph_ms = mod.mph_to_ms(22.3694)
+    assert_equal(true, (mph_ms - 10.0).abs < 0.01, "mph_to_ms expected ~10, got #{mph_ms}")
   end
 end
 

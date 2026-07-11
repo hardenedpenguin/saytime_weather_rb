@@ -42,4 +42,11 @@ parsed = h.parse_openmeteo_response(json)
 assert_equal('Partly Cloudy', parsed[:condition], 'is_day 0 must not become Sunny via || 1')
 assert_equal('2026-05-30T21:30', parsed[:observation_time])
 
+assert_equal(nil, h.weather_code_to_text(9999, 1), 'unmapped code returns nil')
+unknown_json = {
+  'current' => { 'temperature_2m' => 10.0, 'weather_code' => 9999, 'is_day' => 1, 'time' => '2026-07-02T12:00' },
+  'timezone' => 'UTC'
+}
+assert_equal(nil, h.parse_openmeteo_response(unknown_json), 'unmapped code rejects parse')
+
 puts 'open_meteo_test: ok'

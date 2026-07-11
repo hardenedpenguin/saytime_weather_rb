@@ -75,6 +75,20 @@ module SaytimeWeather
         nil
       when 404
         NOT_RETRYABLE
+      when 401
+        if uri.host&.include?('weatherapi.com')
+          w('WeatherAPI authentication failed (check weatherapi_key or WEATHERAPI_KEY)')
+        else
+          w("HTTP error 401 from #{uri.host}")
+        end
+        NOT_RETRYABLE
+      when 403
+        if uri.host&.include?('weatherapi.com')
+          w('WeatherAPI access denied (check API key and account quota)')
+        else
+          w("HTTP error 403 from #{uri.host}")
+        end
+        NOT_RETRYABLE
       when 429
         w('Rate limited by server, please wait before retrying')
         nil

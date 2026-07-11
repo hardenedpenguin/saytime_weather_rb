@@ -18,5 +18,9 @@ assert(!SaytimeWeather::WeatherNumeric.valid_weather_data?({ temp: nil, conditio
        'missing temp is invalid')
 assert(!SaytimeWeather::WeatherNumeric.valid_weather_data?({ temp: 72, condition: '' }),
        'empty condition is invalid')
+assert(!SaytimeWeather::WeatherNumeric.valid_weather_data?({ temp: 72, condition: 'Unknown' }),
+       'Unknown condition is invalid')
+assert(SaytimeWeather::WeatherNumeric.valid_condition?('Clear'), 'Clear is valid')
+assert(!SaytimeWeather::WeatherNumeric.valid_condition?('Unknown'), 'Unknown is not valid')
 
 puts 'weather_numeric_test: ok'

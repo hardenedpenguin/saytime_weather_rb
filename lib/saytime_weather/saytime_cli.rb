@@ -172,7 +172,7 @@ module SaytimeWeather
       puts "Configuration in /etc/asterisk/local/weather.ini:"
       puts "  - Temperature_mode: F/C (default: F)"
       puts "  - process_condition: YES/NO (default: YES)\n\n"
-      puts "Note: No API keys required! Uses system time and weather.rb for weather.\n"
+      puts "Note: Free providers need no API key; WeatherAPI requires weatherapi_key when weather_provider = weatherapi.\n"
     end
 
     def validate_options

@@ -69,6 +69,7 @@ module SaytimeWeather
       opts[:default_country] = @options[:default_country] if @options[:default_country]
       opts[:temperature_mode] = @config['Temperature_mode'] if @config['Temperature_mode']
       opts[:no_condition] = true if @config['process_condition'] == 'NO'
+      opts[:custom_sound_dir] = @options[:custom_sound_dir] if @options[:custom_sound_dir]
       opts
     end
 

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'config_error'
+
 module SaytimeWeather
   # Run weather retrieval in-process (same behavior as weather.rb).
   # Returns true on success, false on failure.
@@ -8,6 +10,9 @@ module SaytimeWeather
     script = WeatherScript.new(options: normalize_weather_options(options))
     display_only = options[:display_only] ? 'v' : nil
     script.run(location: location, display_only: display_only)
+  rescue ConfigError => e
+    $stderr.puts "ERROR: #{e.message}"
+    false
   end
 
   def self.normalize_weather_options(options)
@@ -18,6 +23,7 @@ module SaytimeWeather
     opts[:temperature_mode] = options[:temperature_mode] if options[:temperature_mode]
     opts[:no_condition] = true if options[:no_condition]
     opts[:use_gps] = true if options[:use_gps]
+    opts[:custom_sound_dir] = options[:custom_sound_dir] if options[:custom_sound_dir]
     opts
   end
 end

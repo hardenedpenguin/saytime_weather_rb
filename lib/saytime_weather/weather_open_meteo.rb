@@ -38,9 +38,12 @@ module SaytimeWeather
       is_day = open_meteo_is_day(data['current']['is_day'])
       return nil unless temp.is_a?(Numeric)
 
+      condition = weather_code_to_text(code, is_day, local_time: local_time)
+      return nil unless WeatherNumeric.valid_condition?(condition)
+
       {
         temp: temp,
-        condition: weather_code_to_text(code, is_day, local_time: local_time),
+        condition: condition,
         timezone: data['timezone'] || '',
         observation_time: local_time,
         precipitation: data['current']['precipitation'],
@@ -143,7 +146,7 @@ module SaytimeWeather
         99 => 'Thunderstorm with Hail'
       }
 
-      codes[code] || 'Unknown'
+      codes[code]
     end
   end
 end

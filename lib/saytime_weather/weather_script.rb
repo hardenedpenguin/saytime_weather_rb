@@ -32,7 +32,8 @@ module SaytimeWeather
         default_country: nil,
         temperature_mode: nil,
         no_condition: false,
-        use_gps: false
+        use_gps: false,
+        custom_sound_dir: nil
       }
       @config = {}
       @provider_explicitly_set = false
@@ -57,6 +58,7 @@ module SaytimeWeather
       @options[:temperature_mode] = opts[:temperature_mode].upcase if opts[:temperature_mode]
       @options[:no_condition] = true if opts[:no_condition]
       @options[:use_gps] = true if opts[:use_gps]
+      @options[:custom_sound_dir] = opts[:custom_sound_dir] if opts[:custom_sound_dir]
     end
 
     def parse_options
@@ -79,7 +81,11 @@ module SaytimeWeather
       puts "Usage: weather.rb [OPTIONS] [location_id] [v]\n\n"
       puts "Arguments:"
       puts "  location_id    Postal code, IATA, ICAO, lat,lon coordinates, or omit with --gps"
-      puts "  v              Display text only (no sound output)\n\n"
+      puts "  v              Display text only (no sound output); place after location (see examples)\n\n"
+      puts "Examples:"
+      puts "  weather.rb 77511 v              # display only"
+      puts "  weather.rb -v 77511 v          # verbose display only"
+      puts "  weather.rb --gps v              # GPS display only\n\n"
       puts "Options:"
       puts "  -c, --config FILE        Alternate configuration file"
       puts "  -d, --default-country CC Override default country"
@@ -128,7 +134,8 @@ module SaytimeWeather
 
       temperature, condition, provider = fetch_weather_for_location(location)
 
-      unless temperature && condition
+      temp_f = temperature.to_f
+      unless WeatherNumeric.numeric_temp?(temp_f) && WeatherNumeric.valid_condition?(condition)
         label = location_label_for_error(location)
         error("No weather report available")
         error("  Location: #{label}")
@@ -136,7 +143,6 @@ module SaytimeWeather
         return false
       end
 
-      temp_f = temperature.to_f
       unless temp_f >= -150.0 && temp_f <= 200.0
         error("Invalid temperature value: #{temp_f}°F")
         error("  Location: #{location_label_for_error(location)}")

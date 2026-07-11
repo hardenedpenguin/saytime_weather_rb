@@ -4,12 +4,14 @@
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
 require 'saytime_weather/weather_geocoding'
 require 'saytime_weather/weather_airports'
+require 'saytime_weather/weather_units'
 require 'saytime_weather/weather_weatherapi'
 require 'saytime_weather/endpoints'
 
 class WeatherapiHarness
   include SaytimeWeather::WeatherGeocoding
   include SaytimeWeather::WeatherAirports
+  include SaytimeWeather::WeatherUnits
   include SaytimeWeather::WeatherWeatherapi
 
   attr_accessor :config, :options

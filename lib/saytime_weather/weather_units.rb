@@ -28,5 +28,11 @@ module SaytimeWeather
       index = ((degrees + 11.25) / 22.5).to_i % 16
       directions[index]
     end
+
+    def mph_to_ms(mph)
+      return nil unless mph && mph.is_a?(Numeric)
+
+      mph / 2.23694
+    end
   end
 end

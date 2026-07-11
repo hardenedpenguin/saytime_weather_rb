@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require_relative 'config_error'
 
 module SaytimeWeather
   module WeatherConfig
@@ -8,8 +9,7 @@ module SaytimeWeather
       config_path = @options[:config_file] || SaytimeWeather::Paths.config_path
 
       if @options[:config_file] && !File.exist?(@options[:config_file])
-        $stderr.puts "ERROR: Custom config file not found: #{@options[:config_file]}"
-        exit 1
+        raise ConfigError, "Custom config file not found: #{@options[:config_file]}"
       end
 
       if File.exist?(config_path)
@@ -122,8 +122,7 @@ module SaytimeWeather
     def validate_config
       temp_mode = @config['Temperature_mode'].to_s
       unless temp_mode =~ /^[CF]$/
-        error("Invalid Temperature_mode: #{@config['Temperature_mode']}")
-        exit 1
+        raise ConfigError, "Invalid Temperature_mode: #{@config['Temperature_mode']}"
       end
 
       provider = @config['weather_provider'].to_s.downcase
@@ -134,8 +133,7 @@ module SaytimeWeather
       end
 
       if provider == 'weatherapi' && !weatherapi_key_configured?
-        error('weather_provider is weatherapi but weatherapi_key (or WEATHERAPI_KEY) is not set')
-        exit 1
+        raise ConfigError, 'weather_provider is weatherapi but weatherapi_key (or WEATHERAPI_KEY) is not set'
       end
 
       source = @config['location_source'].to_s.strip.downcase
