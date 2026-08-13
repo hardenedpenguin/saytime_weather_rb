@@ -251,6 +251,8 @@ If weather lookup fails, saytime still announces **time only** when possible but
 
 Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FILE`, `--gps`, `-v, --verbose`, `--dry-run`, `--no-weather`, `--weather-subprocess`
 
+**24-hour format (`-u`):** Military/ham-style announcements (not aviation digit-by-digit). On the hour, the time includes **hundred** (e.g. 14:00 → “fourteen hundred hours”). With minutes, hour and minute are spoken separately without **hundred** (e.g. 14:16 → “fourteen sixteen hours”). Hours before 10 include a leading zero (09:05 → “zero nine zero five hours”).
+
 ### GPS location
 
 Set `location_source = gps` in `weather.ini`, or pass `--gps` on the command line. Coordinates come from **gpsd** (recommended; package `Recommends: gpsd`). If gpsd is unavailable, the app tries `gpspipe` when installed. The last good fix is cached under `/tmp/saytime-gps-fix.json`.

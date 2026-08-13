@@ -100,17 +100,7 @@ module SaytimeWeather
       files << add_sound_file("#{sound_dir}/rpt/thetimeis.ulaw")
 
       if use_24hour
-        files << add_sound_file("#{sound_dir}/digits/0.ulaw") if clock < 10
-        files << format_number(clock, sound_dir)
-
-        if minute == 0
-          files << add_sound_file(sound_path(sound_dir, 'hundred.ulaw'))
-          files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
-        else
-          files << add_sound_file("#{sound_dir}/digits/0.ulaw") if minute < 10
-          files << format_number(minute, sound_dir)
-          files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
-        end
+        files << build_24hour_time_sounds(clock, minute, sound_dir)
       else
         display_hour = twelve_hour_display(clock)
         files << add_sound_file("#{sound_dir}/digits/#{display_hour}.ulaw")
@@ -129,6 +119,27 @@ module SaytimeWeather
       warn("#{@missing_files} sound file(s) missing. Run with -v for details.") if @missing_files > 0 && !@options[:verbose]
 
       files.join(' ')
+    end
+
+    # Military-style 24-hour time (ham/military, not aviation digit-by-digit):
+    # 14:00 -> "fourteen hundred hours"; 14:16 -> "fourteen sixteen hours".
+    # Hour and minute are always spoken separately — never as one number (1416),
+    # which would incorrectly insert "hundred" via format_number.
+    def build_24hour_time_sounds(clock, minute, sound_dir)
+      files = String.new
+      files << add_sound_file("#{sound_dir}/digits/0.ulaw") if clock < 10
+      # Speak hour and minute separately (never clock * 100 + minute — format_number adds hundred).
+      files << format_number(clock, sound_dir)
+
+      if minute.zero?
+        files << add_sound_file(sound_path(sound_dir, 'hundred.ulaw'))
+      else
+        files << add_sound_file("#{sound_dir}/digits/0.ulaw") if minute < 10
+        files << format_number(minute, sound_dir)
+      end
+
+      files << add_sound_file(sound_path(sound_dir, 'hours.ulaw'))
+      files
     end
 
     def format_number(num, sound_dir)

@@ -149,12 +149,38 @@ assert_12h_files(out, hour_digit: 2, minute_files: ['digits/15.ulaw'], am_pm: 'p
          "hour #{hour}: meridian should resolve under digits/")
 end
 
-# 24-hour mode: no a-m/p-m; afternoon hour uses 14 + hours
+# 24-hour mode: military-style; hundred only on the hour; always ends with hours
 h24 = SaytimeTimeHarness.new
+
+out = h24.process_time(h24.time_at(14, 0), true)
+assert(out.include?('digits/14.ulaw'), '14:00 24h should say fourteen')
+assert(out.include?('hundred.ulaw'), '14:00 24h should include hundred')
+assert(out.include?('hours.ulaw'), '14:00 24h should end with hours')
+assert(!out.include?('a-m.ulaw') && !out.include?('p-m.ulaw'), '24h must not play meridian')
+
+out = h24.process_time(h24.time_at(14, 16), true)
+assert(out.include?('digits/14.ulaw'), '14:16 24h should say fourteen')
+assert(out.include?('digits/16.ulaw'), '14:16 24h should say sixteen')
+assert(out.include?('hours.ulaw'), '14:16 24h should end with hours')
+assert(!out.include?('hundred.ulaw'), '14:16 24h must not include hundred')
+
 out = h24.process_time(h24.time_at(14, 30), true)
 assert(out.include?('digits/14.ulaw'), '14:30 24h should say fourteen')
-assert(out.include?('hours.ulaw'), '24h non-zero minutes should end with hours')
-assert(!out.include?('a-m.ulaw') && !out.include?('p-m.ulaw'), '24h must not play meridian')
+assert(out.include?('hours.ulaw'), '14:30 24h should end with hours')
+assert(!out.include?('hundred.ulaw'), '14:30 24h must not include hundred')
+
+out = h24.process_time(h24.time_at(9, 5), true)
+parts = out.split
+zero_positions = parts.each_with_index.select { |p, _| p.end_with?('/digits/0.ulaw') }.map(&:last)
+nine_pos = parts.index { |p| p.end_with?('/digits/9.ulaw') }
+five_pos = parts.index { |p| p.end_with?('/digits/5.ulaw') }
+assert(zero_positions.length == 2, '09:05 24h should play zero twice')
+assert(zero_positions[0] < nine_pos, '09:05 24h first zero should precede nine')
+assert(nine_pos < zero_positions[1], '09:05 24h nine should precede second zero')
+assert(zero_positions[1] < five_pos, '09:05 24h second zero should precede five')
+assert(out.include?('digits/9.ulaw'), '09:05 24h should say nine')
+assert(out.include?('digits/5.ulaw'), '09:05 24h should say five')
+assert(!out.include?('hundred.ulaw'), '09:05 24h must not include hundred')
 
 assert(hg.greeting_for_hour24(8) == 'morning', '8:00 is morning greeting')
 assert(hg.greeting_for_hour24(14) == 'afternoon', '14:00 is afternoon greeting')
