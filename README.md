@@ -258,7 +258,7 @@ Generate optional announcement sounds on an ASL node with [asl-tts](https://wiki
 ASL_NODE=546050 ./scripts/generate_wx_extra_sounds.sh
 
 # Copy into repo sounds/ for packaging:
-for f in feels-like dewpoint humidity percent wind gust pressure precipitation uv-index visibility point \
+for f in feels-like dewpoint humidity percent wind gust pressure precipitation uv-index visibility point trace \
   miles-per-hour inches-of-mercury inches miles kilometers-per-hour hectopascals millimeters kilometers \
   north north-northeast northeast east-northeast east east-southeast southeast south-southeast south \
   south-southwest southwest west-southwest west west-northwest northwest north-northwest; do

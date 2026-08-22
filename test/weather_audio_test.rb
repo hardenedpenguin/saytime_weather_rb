@@ -43,7 +43,7 @@ Dir.mktmpdir do |dir|
   end
 
   (0..20).each { |n| FileUtils.touch(File.join(digits, "#{n}.ulaw")) }
-  [30, 12, 15, 22, 7, 88, 65].each { |n| FileUtils.touch(File.join(digits, "#{n}.ulaw")) }
+  [30, 12, 15, 22, 7, 88, 60, 5].each { |n| FileUtils.touch(File.join(digits, "#{n}.ulaw")) }
   FileUtils.touch(File.join(digits, 'minus.ulaw'))
   FileUtils.touch(File.join(dir, 'silence', '1.ulaw')) rescue FileUtils.mkdir_p(File.join(dir, 'silence'))
   FileUtils.touch(File.join(dir, 'silence', '1.ulaw'))
@@ -66,7 +66,8 @@ Dir.mktmpdir do |dir|
   assert_includes(audio, 'point.ulaw')
   assert_includes(audio, 'inches-of-mercury.ulaw')
   assert_includes(audio, 'uv-index.ulaw')
-  assert_includes(audio, 'digits/65.ulaw')
+  assert_includes(audio, 'digits/60.ulaw')
+  assert_includes(audio, 'digits/5.ulaw')
   assert_includes(audio, 'digits/15.ulaw')
 end
 

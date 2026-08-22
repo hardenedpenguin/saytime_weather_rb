@@ -17,9 +17,8 @@ set -euo pipefail
 
 NODE="${ASL_NODE:-546050}"
 DEST="${1:-/usr/share/asterisk/sounds/en/wx}"
-TMP="$(mktemp -d /tmp/wx-extra-sounds.XXXXXX)"
-chmod 777 "$TMP"
-trap 'rm -rf "$TMP"' EXIT
+TMP="$(sudo -u asterisk mktemp -d /tmp/wx-extra-sounds.XXXXXX)"
+trap 'sudo rm -rf "$TMP"' EXIT
 
 if ! command -v asl-tts >/dev/null 2>&1; then
   echo "asl-tts not found (install asl3-tts)" >&2
