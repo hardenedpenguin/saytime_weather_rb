@@ -118,6 +118,10 @@ module SaytimeWeather
       wind_speed = nil
       wind_direction = nil
       wind_gusts = nil
+      feels_like = nil
+      dewpoint = nil
+      uv_index = nil
+      visibility_m = nil
       if @config['show_wind'] == 'YES'
         mph = cur['wind_mph']
         mph = mph.to_f if mph.is_a?(String)
@@ -132,6 +136,30 @@ module SaytimeWeather
         wind_gusts = mph_to_ms(gust) if gust.is_a?(Numeric)
       end
 
+      if @config['show_feels_like'] == 'YES'
+        fl = cur['feelslike_f']
+        fl = fl.to_f if fl.is_a?(String)
+        feels_like = fl if fl.is_a?(Numeric)
+      end
+
+      if @config['show_dewpoint'] == 'YES'
+        dp = cur['dewpoint_f']
+        dp = dp.to_f if dp.is_a?(String)
+        dewpoint = dp if dp.is_a?(Numeric)
+      end
+
+      if @config['show_uv'] == 'YES'
+        uv = cur['uv']
+        uv = uv.to_f if uv.is_a?(String)
+        uv_index = uv if uv.is_a?(Numeric)
+      end
+
+      if @config['show_visibility'] == 'YES'
+        vis_mi = cur['vis_miles']
+        vis_mi = vis_mi.to_f if vis_mi.is_a?(String)
+        visibility_m = vis_mi * 1609.344 if vis_mi.is_a?(Numeric)
+      end
+
       {
         temp: temp_f,
         condition: condition,
@@ -144,7 +172,11 @@ module SaytimeWeather
         wind_direction: wind_direction,
         wind_gusts: wind_gusts,
         pressure: pressure,
-        humidity: humidity
+        humidity: humidity,
+        feels_like: feels_like,
+        dewpoint: dewpoint,
+        uv_index: uv_index,
+        visibility_m: visibility_m
       }
     end
 

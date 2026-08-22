@@ -6,6 +6,12 @@ require 'saytime_weather/weather_open_meteo'
 
 class OpenMeteoHarness
   include SaytimeWeather::WeatherOpenMeteo
+
+  attr_accessor :config
+
+  def initialize(config = {})
+    @config = config
+  end
 end
 
 def assert_equal(expected, actual, msg = nil)

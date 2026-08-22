@@ -32,6 +32,9 @@ module SaytimeWeather
       wind_gusts = nil
       pressure = nil
       humidity = nil
+      feels_like = nil
+      dewpoint = nil
+      visibility_m = nil
 
       if observation_stations_url
         response = @http.get(observation_stations_url, SaytimeWeather::Network.timeout_long, nws_ua)
@@ -136,6 +139,19 @@ module SaytimeWeather
                 humidity = rh if rh && rh.is_a?(Numeric)
               end
 
+              if @config['show_feels_like'] == 'YES'
+                feels_like = nws_feels_like_fahrenheit(props)
+              end
+
+              if @config['show_dewpoint'] == 'YES'
+                dp_c = nws_numeric_value(props, 'dewpoint')
+                dewpoint = celsius_to_fahrenheit(dp_c) if dp_c.is_a?(Numeric)
+              end
+
+              if @config['show_visibility'] == 'YES'
+                visibility_m = nws_numeric_value(props, 'visibility')
+              end
+
               break if WeatherNumeric.numeric_temp?(temp) && condition
             end
           end
@@ -183,8 +199,27 @@ module SaytimeWeather
         wind_direction: wind_direction,
         wind_gusts: wind_gusts,
         pressure: pressure,
-        humidity: humidity
+        humidity: humidity,
+        feels_like: feels_like,
+        dewpoint: dewpoint,
+        visibility_m: visibility_m
       }
+    end
+
+    def nws_numeric_value(props, key)
+      obj = props[key]
+      return nil unless obj.is_a?(Hash)
+
+      val = obj['value']
+      val if val.is_a?(Numeric)
+    end
+
+    def nws_feels_like_fahrenheit(props)
+      hi_c = nws_numeric_value(props, 'heatIndex')
+      wc_c = nws_numeric_value(props, 'windChill')
+      c = hi_c if hi_c.is_a?(Numeric)
+      c = wc_c if c.nil? && wc_c.is_a?(Numeric)
+      celsius_to_fahrenheit(c) if c.is_a?(Numeric)
     end
 
     def parse_nws_condition(text)

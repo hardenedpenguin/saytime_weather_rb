@@ -34,5 +34,29 @@ module SaytimeWeather
 
       mph / 2.23694
     end
+
+    def celsius_to_fahrenheit(c)
+      return nil unless c.is_a?(Numeric)
+
+      (c * 9.0 / 5.0) + 32.0
+    end
+
+    def fahrenheit_to_celsius(f)
+      return nil unless f.is_a?(Numeric)
+
+      ((f - 32) * 5.0 / 9.0).round
+    end
+
+    def meters_to_miles(m)
+      return nil unless m.is_a?(Numeric)
+
+      (m / 1609.344).round(1)
+    end
+
+    def meters_to_km(m)
+      return nil unless m.is_a?(Numeric)
+
+      (m / 1000.0).round(1)
+    end
   end
 end

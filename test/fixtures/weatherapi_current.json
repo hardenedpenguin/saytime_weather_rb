@@ -11,6 +11,12 @@
   "current": {
     "temp_f": 82.4,
     "temp_c": 28.0,
+    "feelslike_f": 85.1,
+    "feelslike_c": 29.5,
+    "dewpoint_f": 58.0,
+    "dewpoint_c": 14.4,
+    "uv": 6.5,
+    "vis_miles": 10.0,
     "is_day": 1,
     "condition": {
       "text": "Partly cloudy"

@@ -13,7 +13,7 @@ module SaytimeWeather
       return nil unless data && data['current_condition'].is_a?(Array) && data['current_condition'][0].is_a?(Hash)
 
       cur = data['current_condition'][0]
-      temp_f = cur['temp_F'] || cur['FeelsLikeF']
+      temp_f = cur['temp_F']
       temp_f = temp_f.to_f if temp_f.is_a?(String)
       return nil unless temp_f.is_a?(Numeric)
 
@@ -47,6 +47,7 @@ module SaytimeWeather
 
       wind_speed = nil
       wind_direction = nil
+      feels_like = nil
       if @config['show_wind'] == 'YES'
         mph = cur['windspeedMiles']
         mph = mph.to_f if mph.is_a?(String)
@@ -55,6 +56,12 @@ module SaytimeWeather
         wd = cur['winddirDegree']
         wd = wd.to_f if wd.is_a?(String)
         wind_direction = wd if wd.is_a?(Numeric)
+      end
+
+      if @config['show_feels_like'] == 'YES'
+        fl = cur['FeelsLikeF']
+        fl = fl.to_f if fl.is_a?(String)
+        feels_like = fl if fl.is_a?(Numeric)
       end
 
       {
@@ -66,7 +73,8 @@ module SaytimeWeather
         wind_direction: wind_direction,
         wind_gusts: nil,
         pressure: pressure,
-        humidity: humidity
+        humidity: humidity,
+        feels_like: feels_like
       }
     end
 

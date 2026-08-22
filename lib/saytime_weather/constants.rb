@@ -12,4 +12,16 @@ module SaytimeWeather
   SAYTIME_DEFAULT_GREETING = true
   SAYTIME_DEFAULT_PLAY_METHOD = 'localplay'
   SAYTIME_PLAY_DELAY = 5
+
+  # Optional text-output fields (all default NO in weather.ini).
+  OPTIONAL_WEATHER_DISPLAY_KEYS = %w[
+    show_precipitation
+    show_wind
+    show_pressure
+    show_humidity
+    show_feels_like
+    show_dewpoint
+    show_uv
+    show_visibility
+  ].freeze
 end

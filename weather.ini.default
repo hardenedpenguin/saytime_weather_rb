@@ -108,6 +108,33 @@ show_pressure = NO
 ; Default: NO
 show_humidity = NO
 
+; Show apparent / feels-like temperature (heat index or wind chill when available)
+; F mode: degrees Fahrenheit; C mode: degrees Celsius
+; Providers: Open-Meteo, NWS (heatIndex/windChill), WeatherAPI, wttr.in
+; Valid values: YES, NO
+; Default: NO
+show_feels_like = NO
+
+; Show dewpoint temperature
+; F mode: degrees Fahrenheit; C mode: degrees Celsius
+; Providers: Open-Meteo, NWS, WeatherAPI, Met.no
+; Valid values: YES, NO
+; Default: NO
+show_dewpoint = NO
+
+; Show UV index (integer)
+; Providers: Open-Meteo, WeatherAPI
+; Valid values: YES, NO
+; Default: NO
+show_uv = NO
+
+; Show visibility distance
+; F mode: miles (mi); C mode: kilometers (km)
+; Providers: Open-Meteo, NWS, WeatherAPI
+; Valid values: YES, NO
+; Default: NO
+show_visibility = NO
+
 ; Show precipitation even when zero
 ; If NO, precipitation is only shown when there is measurable precipitation
 ; Valid values: YES, NO

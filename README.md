@@ -81,6 +81,10 @@ show_precipitation = NO
 show_wind = NO
 show_pressure = NO
 show_humidity = NO
+show_feels_like = NO
+show_dewpoint = NO
+show_uv = NO
+show_visibility = NO
 show_zero_precip = NO
 precip_trace_mm = 0.10
 ```
@@ -99,6 +103,10 @@ show_precipitation = NO
 show_wind = NO
 show_pressure = NO
 show_humidity = NO
+show_feels_like = NO
+show_dewpoint = NO
+show_uv = NO
+show_visibility = NO
 show_zero_precip = NO
 precip_trace_mm = 0.10
 ```
@@ -183,6 +191,14 @@ For **postal codes**, data comes from your configured weather provider. For **ai
   - C mode: hectopascals (hPa)
 - **show_humidity**: `YES` to show relative humidity percentage (default: `NO`)
   - Displays as "65% RH"
+- **show_feels_like**: `YES` to show apparent / feels-like temperature (default: `NO`)
+  - Uses heat index or wind chill from NWS when available; `apparent_temperature` from Open-Meteo
+  - F mode: °F; C mode: °C
+- **show_dewpoint**: `YES` to show dewpoint (default: `NO`)
+  - F mode: °F; C mode: °C
+- **show_uv**: `YES` to show UV index (default: `NO`)
+- **show_visibility**: `YES` to show visibility (default: `NO`)
+  - F mode: miles (mi); C mode: kilometers (km)
 - **show_zero_precip**: `YES` to show precipitation even when zero (default: `NO`)
   - If `NO`, precipitation is only shown when there's measurable precipitation
 - **precip_trace_mm**: Minimum precipitation threshold in millimeters (default: `0.10`)
@@ -218,16 +234,22 @@ The weather script outputs a formatted string with temperature, condition, and o
 
 ```
 75°F, 24°C / Clear
-75°F, 24°C / 65% RH / Clear / Precip 0.25 in / Wind 15 mph SW (gust 22) / 29.92 inHG
+75°F, 24°C / 65% RH / Feels like 88°F / Dewpoint 62°F / Clear / Precip 0.25 in / Wind 15 mph SW (gust 22) / 29.92 inHG / UV 7 / Visibility 10.0 mi
 ```
 
 The format includes:
 - Temperature in both Fahrenheit and Celsius
 - Relative humidity (if `show_humidity = YES`)
+- Feels-like temperature (if `show_feels_like = YES`)
+- Dewpoint (if `show_dewpoint = YES`)
 - Weather condition
 - Precipitation (if `show_precipitation = YES`)
 - Wind speed, direction, and gusts (if `show_wind = YES`)
 - Barometric pressure (if `show_pressure = YES`)
+- UV index (if `show_uv = YES`)
+- Visibility (if `show_visibility = YES`)
+
+All `show_*` options affect **text output only** (`weather.rb … v` or stdout). Radio announcements remain temperature and condition only.
 
 ### Time Script
 

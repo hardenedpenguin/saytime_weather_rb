@@ -22,7 +22,11 @@ class WeatherapiHarness
       'show_precipitation' => 'YES',
       'show_wind' => 'YES',
       'show_pressure' => 'YES',
-      'show_humidity' => 'YES'
+      'show_humidity' => 'YES',
+      'show_feels_like' => 'YES',
+      'show_dewpoint' => 'YES',
+      'show_uv' => 'YES',
+      'show_visibility' => 'YES'
     }.merge(config)
     @options = { verbose: false }
   end
@@ -51,6 +55,10 @@ assert_equal('America/Chicago', parsed[:timezone])
 assert_equal('2026-05-19T14:30', parsed[:observation_time])
 assert_equal(29.51, parsed[:lat])
 assert_equal(-95.09, parsed[:lon])
+assert_equal(85.1, parsed[:feels_like])
+assert_equal(58.0, parsed[:dewpoint])
+assert_equal(6.5, parsed[:uv_index])
+assert((parsed[:visibility_m] - (10.0 * 1609.344)).abs < 1.0, 'visibility miles to meters')
 
 night = fixture.dup
 night['current']['is_day'] = 0

@@ -39,6 +39,10 @@ module SaytimeWeather
       @config['show_wind'] ||= 'NO'
       @config['show_pressure'] ||= 'NO'
       @config['show_humidity'] ||= 'NO'
+      @config['show_feels_like'] ||= 'NO'
+      @config['show_dewpoint'] ||= 'NO'
+      @config['show_uv'] ||= 'NO'
+      @config['show_visibility'] ||= 'NO'
       @config['show_zero_precip'] ||= 'NO'
       @config['precip_trace_mm'] ||= '0.10'
       @config['location_source'] ||= 'postal'
@@ -97,6 +101,10 @@ module SaytimeWeather
         show_wind = NO
         show_pressure = NO
         show_humidity = NO
+        show_feels_like = NO
+        show_dewpoint = NO
+        show_uv = NO
+        show_visibility = NO
         show_zero_precip = NO
         precip_trace_mm = 0.10
         ; show_* options apply to postal-code lookups; airport METAR adds extras when enabled.

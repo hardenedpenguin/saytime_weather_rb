@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.33-1) unstable; urgency=medium
+
+  * Optional show_feels_like, show_dewpoint, show_uv, show_visibility (text output)
+  * NWS heat index / wind chill for feels-like; wttr temp_F vs FeelsLikeF fix
+  * 24-hour time: hundred on the hour only; build_24hour_time_sounds helper
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sat, 22 Aug 2026 16:45:00 -0500
+
 saytime-weather-rb (0.0.31-1) unstable; urgency=medium
 
   * Fix --sound-dir for wx condition audio; remove misleading clear/sunny fallback

@@ -97,8 +97,9 @@ module SaytimeWeather
       puts "  --version                Version information\n\n"
       puts "Configuration: #{Paths.config_path}\n"
       puts "GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.\n"
-      puts "Note: show_precipitation, show_wind, show_pressure, and show_humidity apply to"
-      puts "postal-code lookups only; airport METAR provides temperature and condition.\n"
+      puts "Note: show_* options add fields to text output (weather.rb … v or stdout)."
+      puts "They do not change radio audio (temperature and condition only)."
+      puts "Airport METAR: temp/condition from METAR; extras from Open-Meteo when enabled.\n"
     end
 
   # Returns true on success, false on failure (does not exit).
@@ -335,7 +336,8 @@ module SaytimeWeather
     def merge_supplemental_fields(supplemental)
       return unless supplemental.is_a?(Hash)
 
-      %i[precipitation wind_speed wind_direction wind_gusts pressure humidity].each do |key|
+      %i[precipitation wind_speed wind_direction wind_gusts pressure humidity
+         feels_like dewpoint uv_index visibility_m].each do |key|
         val = supplemental[key]
         next if val.nil?
         next unless val.is_a?(Numeric)
@@ -345,7 +347,7 @@ module SaytimeWeather
     end
 
     def extra_weather_fields_enabled?
-      %w[show_precipitation show_wind show_pressure show_humidity].any? { |k| @config[k] == 'YES' }
+      SaytimeWeather::OPTIONAL_WEATHER_DISPLAY_KEYS.any? { |k| @config[k] == 'YES' }
     end
 
     def report_coordinate_failure(location, lat, lon, provider)
@@ -369,11 +371,68 @@ module SaytimeWeather
         output_parts << "#{humidity_val.round}% RH" if humidity_val.is_a?(Numeric)
       end
 
+      append_feels_like(output_parts, weather_data, temp_mode)
+      append_dewpoint(output_parts, weather_data, temp_mode)
+
       output_parts << condition
       append_precipitation(output_parts, weather_data, temp_mode)
       append_wind(output_parts, weather_data, temp_mode)
       append_pressure(output_parts, weather_data, temp_mode)
+      append_uv(output_parts, weather_data)
+      append_visibility(output_parts, weather_data, temp_mode)
       output_parts.join(' / ')
+    end
+
+    def append_feels_like(output_parts, weather_data, temp_mode)
+      return unless @config['show_feels_like'] == 'YES'
+
+      f = weather_data[:feels_like]
+      return unless f.is_a?(Numeric)
+
+      if temp_mode == 'F'
+        output_parts << "Feels like #{f.round}°F"
+      else
+        c = fahrenheit_to_celsius(f)
+        output_parts << "Feels like #{c}°C" if c
+      end
+    end
+
+    def append_dewpoint(output_parts, weather_data, temp_mode)
+      return unless @config['show_dewpoint'] == 'YES'
+
+      f = weather_data[:dewpoint]
+      return unless f.is_a?(Numeric)
+
+      if temp_mode == 'F'
+        output_parts << "Dewpoint #{f.round}°F"
+      else
+        c = fahrenheit_to_celsius(f)
+        output_parts << "Dewpoint #{c}°C" if c
+      end
+    end
+
+    def append_uv(output_parts, weather_data)
+      return unless @config['show_uv'] == 'YES'
+
+      uv = weather_data[:uv_index]
+      return unless uv.is_a?(Numeric)
+
+      output_parts << "UV #{uv.round}"
+    end
+
+    def append_visibility(output_parts, weather_data, temp_mode)
+      return unless @config['show_visibility'] == 'YES'
+
+      vis_m = weather_data[:visibility_m]
+      return unless vis_m.is_a?(Numeric) && vis_m > 0
+
+      if temp_mode == 'F'
+        mi = meters_to_miles(vis_m)
+        output_parts << "Visibility #{mi} mi" if mi
+      else
+        km = meters_to_km(vis_m)
+        output_parts << "Visibility #{km} km" if km
+      end
     end
 
     def append_precipitation(output_parts, weather_data, temp_mode)

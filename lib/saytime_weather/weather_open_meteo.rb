@@ -19,13 +19,16 @@ module SaytimeWeather
       params = 'temperature_2m,weather_code,is_day'
       return params unless include_extras
 
-      if @config['show_precipitation'] == 'YES' || @config['show_wind'] == 'YES' ||
-         @config['show_pressure'] == 'YES' || @config['show_humidity'] == 'YES'
-        params += ',precipitation' if @config['show_precipitation'] == 'YES'
-        params += ',wind_speed_10m,wind_direction_10m,wind_gusts_10m' if @config['show_wind'] == 'YES'
-        params += ',pressure_msl' if @config['show_pressure'] == 'YES'
-        params += ',relative_humidity_2m' if @config['show_humidity'] == 'YES'
+      params += ',precipitation' if @config['show_precipitation'] == 'YES'
+      if @config['show_wind'] == 'YES'
+        params += ',wind_speed_10m,wind_direction_10m,wind_gusts_10m'
       end
+      params += ',pressure_msl' if @config['show_pressure'] == 'YES'
+      params += ',relative_humidity_2m' if @config['show_humidity'] == 'YES'
+      params += ',apparent_temperature' if @config['show_feels_like'] == 'YES'
+      params += ',dewpoint_2m' if @config['show_dewpoint'] == 'YES'
+      params += ',uv_index' if @config['show_uv'] == 'YES'
+      params += ',visibility' if @config['show_visibility'] == 'YES'
       params
     end
 
@@ -51,7 +54,11 @@ module SaytimeWeather
         wind_direction: data['current']['wind_direction_10m'],
         wind_gusts: data['current']['wind_gusts_10m'],
         pressure: data['current']['pressure_msl'],
-        humidity: data['current']['relative_humidity_2m']
+        humidity: data['current']['relative_humidity_2m'],
+        feels_like: data['current']['apparent_temperature'],
+        dewpoint: data['current']['dewpoint_2m'],
+        uv_index: data['current']['uv_index'],
+        visibility_m: data['current']['visibility']
       }
     end
 

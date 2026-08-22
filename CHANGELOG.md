@@ -2,6 +2,16 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.33] - 2026-08-22
+
+### Added
+- **Optional weather display fields** (all default `NO` in `weather.ini`): `show_feels_like`, `show_dewpoint`, `show_uv`, `show_visibility` — text output only, alongside existing `show_precipitation`, `show_wind`, `show_pressure`, and `show_humidity`.
+- **Provider support**: feels-like from Open-Meteo, NWS (heat index / wind chill), WeatherAPI, and wttr.in; dewpoint from Open-Meteo, NWS, WeatherAPI, and Met.no; UV and visibility from Open-Meteo and WeatherAPI; visibility from NWS.
+- **24-hour time**: clearer military-style announcements (`build_24hour_time_sounds`), hundred only on the hour, README and regression tests.
+
+### Fixed
+- **wttr.in**: use actual `temp_F` for temperature; report `FeelsLikeF` separately when `show_feels_like = YES`.
+
 ## [0.0.31] - 2026-07-11
 
 ### Fixed

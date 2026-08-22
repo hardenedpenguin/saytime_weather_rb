@@ -52,6 +52,12 @@ module SaytimeWeather
       humidity = details['relative_humidity']
       humidity = nil unless humidity.is_a?(Numeric)
 
+      dewpoint = nil
+      if @config['show_dewpoint'] == 'YES'
+        dp_c = details['dew_point_temperature']
+        dewpoint = celsius_to_fahrenheit(dp_c) if dp_c.is_a?(Numeric)
+      end
+
       {
         temp: temp_f,
         condition: condition,
@@ -61,7 +67,8 @@ module SaytimeWeather
         wind_direction: wind_direction,
         wind_gusts: nil,
         pressure: pressure,
-        humidity: humidity
+        humidity: humidity,
+        dewpoint: dewpoint
       }
     end
 
