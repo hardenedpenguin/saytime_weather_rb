@@ -11,6 +11,8 @@ All notable changes to saytime-weather-rb are documented here.
 
 ### Fixed
 - **wttr.in**: use actual `temp_F` for temperature; report `FeelsLikeF` separately when `show_feels_like = YES`.
+- **Open-Meteo dewpoint**: use API field `dew_point_2m` (not `dewpoint_2m`) in requests and parsing.
+- **Visibility display**: show zero visibility (dense fog) instead of omitting it.
 
 ## [0.0.31] - 2026-07-11
 
