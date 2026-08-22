@@ -26,7 +26,7 @@ module SaytimeWeather
       params += ',pressure_msl' if @config['show_pressure'] == 'YES'
       params += ',relative_humidity_2m' if @config['show_humidity'] == 'YES'
       params += ',apparent_temperature' if @config['show_feels_like'] == 'YES'
-      params += ',dewpoint_2m' if @config['show_dewpoint'] == 'YES'
+      params += ',dew_point_2m' if @config['show_dewpoint'] == 'YES'
       params += ',uv_index' if @config['show_uv'] == 'YES'
       params += ',visibility' if @config['show_visibility'] == 'YES'
       params
@@ -56,7 +56,7 @@ module SaytimeWeather
         pressure: data['current']['pressure_msl'],
         humidity: data['current']['relative_humidity_2m'],
         feels_like: data['current']['apparent_temperature'],
-        dewpoint: data['current']['dewpoint_2m'],
+        dewpoint: data['current']['dew_point_2m'],
         uv_index: data['current']['uv_index'],
         visibility_m: data['current']['visibility']
       }

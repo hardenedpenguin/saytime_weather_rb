@@ -55,4 +55,22 @@ unknown_json = {
 }
 assert_equal(nil, h.parse_openmeteo_response(unknown_json), 'unmapped code rejects parse')
 
+dp_h = OpenMeteoHarness.new('show_dewpoint' => 'YES')
+dp_params = dp_h.open_meteo_current_params(include_extras: true)
+assert_equal(true, dp_params.include?('dew_point_2m'), 'show_dewpoint should request dew_point_2m')
+assert_equal(false, dp_params.include?('dewpoint_2m'), 'must not use dewpoint_2m param name')
+
+dp_json = {
+  'current' => {
+    'temperature_2m' => 75.0,
+    'weather_code' => 0,
+    'is_day' => 1,
+    'time' => '2026-08-22T12:00',
+    'dew_point_2m' => 62.5
+  },
+  'timezone' => 'America/Chicago'
+}
+dp_parsed = dp_h.parse_openmeteo_response(dp_json)
+assert_equal(62.5, dp_parsed[:dewpoint], 'dew_point_2m should map to dewpoint')
+
 puts 'open_meteo_test: ok'

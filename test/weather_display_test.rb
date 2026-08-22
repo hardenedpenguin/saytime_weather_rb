@@ -56,7 +56,7 @@ om = OpenMeteoParamsHarness.new(
 )
 params = om.open_meteo_current_params(include_extras: true)
 assert_includes(params, 'apparent_temperature')
-assert_includes(params, 'dewpoint_2m')
+assert_includes(params, 'dew_point_2m')
 assert_includes(params, 'uv_index')
 assert_includes(params, 'visibility')
 
@@ -87,6 +87,22 @@ Dir.mktmpdir do |dir|
   assert_includes(out, 'Visibility 10.0 mi')
   assert(out.start_with?('75°F, 24°C /'), 'line should start with temperature')
   assert_includes(out, 'Clear')
+end
+
+Dir.mktmpdir do |dir|
+  ini = File.join(dir, 'weather.ini')
+  File.write(ini, <<~INI)
+    [weather]
+    Temperature_mode = F
+    weather_provider = openmeteo
+    weather_provider_random = NO
+    show_visibility = YES
+  INI
+
+  script = SaytimeWeather::WeatherScript.new(options: { config_file: ini })
+  script.instance_variable_set(:@weather_data, { visibility_m: 0 })
+  out = script.send(:build_output_line, 75, 24, 'Foggy')
+  assert_includes(out, 'Visibility 0.0 mi', 'zero visibility should be shown')
 end
 
 puts 'weather_display_test: ok'

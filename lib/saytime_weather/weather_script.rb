@@ -424,7 +424,7 @@ module SaytimeWeather
       return unless @config['show_visibility'] == 'YES'
 
       vis_m = weather_data[:visibility_m]
-      return unless vis_m.is_a?(Numeric) && vis_m > 0
+      return unless vis_m.is_a?(Numeric) && !vis_m.negative?
 
       if temp_mode == 'F'
         mi = meters_to_miles(vis_m)
