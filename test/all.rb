@@ -24,6 +24,7 @@ class TestRunner
     load File.expand_path('open_meteo_test.rb', __dir__)
     load File.expand_path('weatherapi_test.rb', __dir__)
     load File.expand_path('weather_sound_test.rb', __dir__)
+    load File.expand_path('weather_audio_test.rb', __dir__)
     load File.expand_path('weather_display_test.rb', __dir__)
     load File.expand_path('weather_config_test.rb', __dir__)
     load File.expand_path('saytime_cli_test.rb', __dir__)

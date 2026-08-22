@@ -2,6 +2,7 @@
 
 module SaytimeWeather
   module SaytimeWeatherBridge
+    include WeatherAudio
     def process_weather(location_id)
       return '' unless @options[:weather_enabled]
       return '' unless weather_location_present?(location_id)
@@ -127,7 +128,12 @@ module SaytimeWeather
       end
 
       files += format_number(temp_value, sound_dir)
-      files + " #{sound_dir}/wx/degrees.ulaw "
+      files += " #{sound_dir}/wx/degrees.ulaw "
+
+      extras_file = tmp_file('weather_extras.json')
+      extras = read_weather_extras_file(extras_file)
+      temp_mode = @config['Temperature_mode'] || 'F'
+      files + build_weather_extras_audio(extras, sound_dir, temp_mode)
     end
   end
 end
