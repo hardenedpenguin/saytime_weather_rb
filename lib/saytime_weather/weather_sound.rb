@@ -3,7 +3,8 @@
 module SaytimeWeather
   module WeatherSound
     def cleanup_old_files
-      [temp_path('temperature'), temp_path('condition.ulaw'), temp_path('timezone')].each do |file|
+      [temp_path('temperature'), temp_path('condition.ulaw'), temp_path('timezone'),
+       temp_path('weather_extras.json')].each do |file|
         if File.exist?(file)
           File.unlink(file) rescue nil
         end

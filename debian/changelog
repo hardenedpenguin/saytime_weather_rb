@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.34-1) unstable; urgency=medium
+
+  * Voice support for optional weather fields (show_* also drives radio audio)
+  * WeatherAudio module; weather_extras.json scratch file for saytime bridge
+  * 36 new wx sound files (feels-like, wind directions, units); asl-tts generator script
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sat, 22 Aug 2026 17:05:00 -0500
+
 saytime-weather-rb (0.0.33-1) unstable; urgency=medium
 
   * Optional show_feels_like, show_dewpoint, show_uv, show_visibility (text output)

@@ -97,8 +97,8 @@ module SaytimeWeather
       puts "  --version                Version information\n\n"
       puts "Configuration: #{Paths.config_path}\n"
       puts "GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.\n"
-      puts "Note: show_* options add fields to text output (weather.rb … v or stdout)."
-      puts "They do not change radio audio (temperature and condition only)."
+      puts "Note: show_* options add fields to text output and radio audio when sound files are installed."
+      puts "Generate optional wx sounds with scripts/generate_wx_extra_sounds.sh (asl-tts on ASL node)."
       puts "Airport METAR: temp/condition from METAR; extras from Open-Meteo when enabled.\n"
     end
 
@@ -162,6 +162,7 @@ module SaytimeWeather
       end
 
       process_weather_condition(condition) if @config['process_condition'] == 'YES' && condition
+      write_weather_extras_file if extra_weather_fields_enabled?
       true
     ensure
       @http.close if @http
@@ -496,6 +497,105 @@ module SaytimeWeather
         output_parts << "#{pressure_inhg} inHG" if pressure_inhg
       else
         output_parts << "#{pressure_hpa.round} hPa"
+      end
+    end
+
+    def write_weather_extras_file
+      weather_data = @weather_data || {}
+      temp_mode = @config['Temperature_mode']
+      segments = []
+
+      if @config['show_humidity'] == 'YES' && weather_data[:humidity].is_a?(Numeric)
+        segments << { 'k' => 'humidity', 'v' => weather_data[:humidity].round }
+      end
+
+      if @config['show_feels_like'] == 'YES' && weather_data[:feels_like].is_a?(Numeric)
+        val = weather_data[:feels_like]
+        val = fahrenheit_to_celsius(val) if temp_mode == 'C'
+        segments << { 'k' => 'feels_like', 'v' => val.round } if val
+      end
+
+      if @config['show_dewpoint'] == 'YES' && weather_data[:dewpoint].is_a?(Numeric)
+        val = weather_data[:dewpoint]
+        val = fahrenheit_to_celsius(val) if temp_mode == 'C'
+        segments << { 'k' => 'dewpoint', 'v' => val.round } if val
+      end
+
+      append_wind_extra_segment(segments, weather_data, temp_mode)
+      append_pressure_extra_segment(segments, weather_data, temp_mode)
+      append_precip_extra_segment(segments, weather_data, temp_mode)
+
+      if @config['show_uv'] == 'YES' && weather_data[:uv_index].is_a?(Numeric)
+        segments << { 'k' => 'uv', 'v' => weather_data[:uv_index].round }
+      end
+
+      if @config['show_visibility'] == 'YES' && weather_data[:visibility_m].is_a?(Numeric) &&
+         !weather_data[:visibility_m].negative?
+        if temp_mode == 'F'
+          mi = meters_to_miles(weather_data[:visibility_m])
+          segments << { 'k' => 'visibility', 'v' => mi } if mi
+        else
+          km = meters_to_km(weather_data[:visibility_m])
+          segments << { 'k' => 'visibility', 'v' => km } if km
+        end
+      end
+
+      return if segments.empty?
+
+      File.write(temp_path('weather_extras.json'), JSON.generate(segments))
+    rescue => e
+      warn("Error writing weather extras file: #{e.message}")
+    end
+
+    def append_wind_extra_segment(segments, weather_data, temp_mode)
+      return unless @config['show_wind'] == 'YES' && weather_data[:wind_speed].is_a?(Numeric)
+
+      wind_ms = weather_data[:wind_speed]
+      return unless wind_ms.positive?
+
+      speed = temp_mode == 'F' ? ms_to_mph(wind_ms) : ms_to_kmh(wind_ms)
+      return unless speed
+
+      segment = { 'k' => 'wind', 'speed' => speed.round }
+      if weather_data[:wind_direction].is_a?(Numeric)
+        dir = wind_direction_to_cardinal(weather_data[:wind_direction])
+        segment['dir'] = dir if dir
+      end
+      if weather_data[:wind_gusts].is_a?(Numeric) && weather_data[:wind_gusts] > wind_ms
+        gust = temp_mode == 'F' ? ms_to_mph(weather_data[:wind_gusts]) : ms_to_kmh(weather_data[:wind_gusts])
+        segment['gust'] = gust.round if gust
+      end
+      segments << segment
+    end
+
+    def append_pressure_extra_segment(segments, weather_data, temp_mode)
+      return unless @config['show_pressure'] == 'YES' && weather_data[:pressure].is_a?(Numeric)
+
+      pressure_hpa = weather_data[:pressure]
+      if temp_mode == 'F'
+        pressure_inhg = hpa_to_inhg(pressure_hpa)
+        segments << { 'k' => 'pressure', 'v' => pressure_inhg } if pressure_inhg
+      else
+        segments << { 'k' => 'pressure', 'v' => pressure_hpa.round }
+      end
+    end
+
+    def append_precip_extra_segment(segments, weather_data, temp_mode)
+      return unless @config['show_precipitation'] == 'YES' && weather_data[:precipitation].is_a?(Numeric)
+
+      precip_mm = weather_data[:precipitation]
+      show_precip = precip_mm.positive? || @config['show_zero_precip'] == 'YES'
+      if show_precip && precip_mm.positive?
+        trace_threshold = @config['precip_trace_mm'].to_f
+        show_precip = false if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
+      end
+      return unless show_precip && precip_mm.positive?
+
+      if temp_mode == 'F'
+        precip_in = mm_to_inches(precip_mm)
+        segments << { 'k' => 'precip', 'v' => precip_in } if precip_in
+      else
+        segments << { 'k' => 'precip', 'v' => precip_mm.round(2) }
       end
     end
 

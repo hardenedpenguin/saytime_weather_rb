@@ -249,7 +249,24 @@ The format includes:
 - UV index (if `show_uv = YES`)
 - Visibility (if `show_visibility = YES`)
 
-All `show_*` options affect **text output only** (`weather.rb … v` or stdout). Radio announcements remain temperature and condition only.
+All `show_*` options affect **text output** (`weather.rb … v` or stdout). When enabled, they also append to **radio audio** after the main temperature (humidity, feels-like, dewpoint, wind, pressure, precipitation, UV, visibility — in that order), provided the matching `wx/*.ulaw` sound files are installed.
+
+Generate optional announcement sounds on an ASL node with [asl-tts](https://wiki.allstarlink.org/):
+
+```bash
+# On crazytrain (or any node with asl3-tts):
+ASL_NODE=546050 ./scripts/generate_wx_extra_sounds.sh
+
+# Copy into repo sounds/ for packaging:
+for f in feels-like dewpoint humidity percent wind gust pressure precipitation uv-index visibility point \
+  miles-per-hour inches-of-mercury inches miles kilometers-per-hour hectopascals millimeters kilometers \
+  north north-northeast northeast east-northeast east east-southeast southeast south-southeast south \
+  south-southwest southwest west-southwest west west-northwest northwest north-northwest; do
+  scp "node:/usr/share/asterisk/sounds/en/wx/${f}.ulaw" sounds/
+done
+```
+
+Core announcement remains: weather → conditions → condition → temperature → degrees, then optional fields.
 
 ### Time Script
 
