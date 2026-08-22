@@ -26,11 +26,15 @@ jobs:
       - name: Verify Debian changelog matches tag
         run: |
           TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          EXPECTED="${VERSION}-1"
           CURRENT=$(dpkg-parsechangelog -SVersion)
-          if [ "$CURRENT" != "$EXPECTED" ]; then
-            echo "::error::debian/changelog is ${CURRENT} but tag ${TAG} requires ${EXPECTED}. Update debian/changelog before tagging."
+          UPSTREAM="${CURRENT%-*}"
+          REV="${CURRENT#*-}"
+          if [ "$TAG" = "v${CURRENT}" ]; then
+            :
+          elif [ "$REV" = "1" ] && [ "$TAG" = "v${UPSTREAM}" ]; then
+            :
+          else
+            echo "::error::debian/changelog is ${CURRENT}; tag ${TAG} must be v${CURRENT} (or v${UPSTREAM} for revision 1)."
             exit 1
           fi
 
@@ -39,9 +43,8 @@ jobs:
 
       - name: Copy .deb into workspace
         run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          cp "../saytime-weather-rb_${VERSION}-1_all.deb" .
+          VERSION=$(dpkg-parsechangelog -SVersion)
+          cp "../saytime-weather-rb_${VERSION}_all.deb" .
 
       - name: Create Release and upload .deb
         uses: softprops/action-gh-release@v2
@@ -67,9 +70,10 @@ jobs:
       - name: Update README for new release
         run: |
           TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
+          VERSION=$(dpkg-parsechangelog -SVersion)
+          sed -i "s|releases/download/v[0-9.]*-[0-9]*/|releases/download/${TAG}/|g" README.md
           sed -i "s|releases/download/v[0-9.]*/|releases/download/${TAG}/|g" README.md
-          sed -i "s|saytime-weather-rb_[0-9.]*-1_all|saytime-weather-rb_${VERSION}-1_all|g" README.md
+          sed -i "s|saytime-weather-rb_[0-9.]*-[0-9]*_all|saytime-weather-rb_${VERSION}_all|g" README.md
 
       - name: Commit and push README
         run: |

@@ -9,6 +9,11 @@ All notable changes to saytime-weather-rb are documented here.
 - **New wx sound files** (36 phrases + 16 wind directions + units): packaged under `sounds/`; generate on an ASL node with `scripts/generate_wx_extra_sounds.sh` (asl-tts).
 - **`WeatherAudio` module**: builds announcement sequences from `weather_extras.json` scratch file; reuses stock `digits/` for numbers.
 
+### Fixed
+- **weather_audio_test**: assert `format_number(65)` as `60` + `5` digit paths (CI failure on 0.0.34-1).
+- **generate_wx_extra_sounds.sh**: asterisk-owned temp directory instead of world-writable `/tmp`.
+- **README**: install example and sound-copy list (`trace.ulaw`).
+
 ## [0.0.33] - 2026-08-22
 
 ### Added
