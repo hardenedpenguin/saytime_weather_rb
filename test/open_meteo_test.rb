@@ -5,6 +5,7 @@ $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
 require 'saytime_weather/weather_open_meteo'
 
 class OpenMeteoHarness
+  include SaytimeWeather::WeatherOptionalFields
   include SaytimeWeather::WeatherOpenMeteo
 
   attr_accessor :config

@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module WeatherNws
+    include WeatherOptionalFields
+
     NWS_MAX_STATIONS = 5
 
     def fetch_weather_nws(lat, lon)
@@ -78,12 +82,12 @@ module SaytimeWeather
 
               condition = apply_nws_night_condition(condition, icon) if condition
 
-              if @config['show_precipitation'] == 'YES'
+              if optional_weather_field_enabled?('show_precipitation')
                 precip_mm = props['precipitationLastHour'] && props['precipitationLastHour']['value']
                 precipitation = precip_mm if precip_mm && precip_mm.is_a?(Numeric)
               end
 
-              if @config['show_wind'] == 'YES'
+              if optional_weather_field_enabled?('show_wind')
                 ws_obj = props['windSpeed']
                 if ws_obj && ws_obj['value'] && ws_obj['value'].is_a?(Numeric)
                   ws_value = ws_obj['value']
@@ -127,28 +131,28 @@ module SaytimeWeather
                 end
               end
 
-              if @config['show_pressure'] == 'YES'
+              if optional_weather_field_enabled?('show_pressure')
                 press_pa = props['seaLevelPressure'] && props['seaLevelPressure']['value']
                 if press_pa && press_pa.is_a?(Numeric)
                   pressure = press_pa / 100.0
                 end
               end
 
-              if @config['show_humidity'] == 'YES'
+              if optional_weather_field_enabled?('show_humidity')
                 rh = props['relativeHumidity'] && props['relativeHumidity']['value']
                 humidity = rh if rh && rh.is_a?(Numeric)
               end
 
-              if @config['show_feels_like'] == 'YES'
+              if optional_weather_field_enabled?('show_feels_like')
                 feels_like = nws_feels_like_fahrenheit(props)
               end
 
-              if @config['show_dewpoint'] == 'YES'
+              if optional_weather_field_enabled?('show_dewpoint')
                 dp_c = nws_numeric_value(props, 'dewpoint')
                 dewpoint = celsius_to_fahrenheit(dp_c) if dp_c.is_a?(Numeric)
               end
 
-              if @config['show_visibility'] == 'YES'
+              if optional_weather_field_enabled?('show_visibility')
                 visibility_m = nws_numeric_value(props, 'visibility')
               end
 

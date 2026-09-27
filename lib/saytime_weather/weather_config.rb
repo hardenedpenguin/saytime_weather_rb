@@ -43,6 +43,7 @@ module SaytimeWeather
       @config['show_dewpoint'] ||= 'NO'
       @config['show_uv'] ||= 'NO'
       @config['show_visibility'] ||= 'NO'
+      SaytimeWeather::OPTIONAL_WEATHER_ANNOUNCE_KEYS.each { |k| @config[k] ||= 'NO' }
       @config['show_zero_precip'] ||= 'NO'
       @config['precip_trace_mm'] ||= '0.10'
       @config['location_source'] ||= 'postal'
@@ -105,9 +106,17 @@ module SaytimeWeather
         show_dewpoint = NO
         show_uv = NO
         show_visibility = NO
+        announce_precipitation = NO
+        announce_wind = NO
+        announce_pressure = NO
+        announce_humidity = NO
+        announce_feels_like = NO
+        announce_dewpoint = NO
+        announce_uv = NO
+        announce_visibility = NO
         show_zero_precip = NO
         precip_trace_mm = 0.10
-        ; show_* options apply to postal-code lookups; airport METAR adds extras when enabled.
+        ; show_* = text output; announce_* = radio audio (fetch data when either is YES).
         ; Optional network tuning (defaults shown; uncomment to override)
         ; http_timeout_short = 10
         ; http_timeout_long = 15

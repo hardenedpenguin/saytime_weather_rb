@@ -13,15 +13,18 @@ module SaytimeWeather
   SAYTIME_DEFAULT_PLAY_METHOD = 'localplay'
   SAYTIME_PLAY_DELAY = 5
 
-  # Optional text-output fields (all default NO in weather.ini).
-  OPTIONAL_WEATHER_DISPLAY_KEYS = %w[
-    show_precipitation
-    show_wind
-    show_pressure
-    show_humidity
-    show_feels_like
-    show_dewpoint
-    show_uv
-    show_visibility
-  ].freeze
+  # Optional weather fields: show_* = text output; announce_* = radio audio (all default NO).
+  OPTIONAL_WEATHER_ANNOUNCE_FOR = {
+    'show_precipitation' => 'announce_precipitation',
+    'show_wind' => 'announce_wind',
+    'show_pressure' => 'announce_pressure',
+    'show_humidity' => 'announce_humidity',
+    'show_feels_like' => 'announce_feels_like',
+    'show_dewpoint' => 'announce_dewpoint',
+    'show_uv' => 'announce_uv',
+    'show_visibility' => 'announce_visibility'
+  }.freeze
+
+  OPTIONAL_WEATHER_DISPLAY_KEYS = OPTIONAL_WEATHER_ANNOUNCE_FOR.keys.freeze
+  OPTIONAL_WEATHER_ANNOUNCE_KEYS = OPTIONAL_WEATHER_ANNOUNCE_FOR.values.freeze
 end

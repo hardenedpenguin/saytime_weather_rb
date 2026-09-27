@@ -19,6 +19,7 @@ module SaytimeWeather
     include Weather7Timer
     include WeatherWeatherapi
     include WeatherSound
+    include WeatherOptionalFields
     include WeatherProviders
     include WeatherGps
     include WeatherNumeric
@@ -97,7 +98,7 @@ module SaytimeWeather
       puts "  --version                Version information\n\n"
       puts "Configuration: #{Paths.config_path}\n"
       puts "GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.\n"
-      puts "Note: show_* options add fields to text output and radio audio when sound files are installed."
+      puts "Note: show_* adds text output; announce_* adds radio audio (requires wx sound files)."
       puts "Generate optional wx sounds with scripts/generate_wx_extra_sounds.sh (asl-tts on ASL node)."
       puts "Airport METAR: temp/condition from METAR; extras from Open-Meteo when enabled.\n"
     end
@@ -162,7 +163,7 @@ module SaytimeWeather
       end
 
       process_weather_condition(condition) if @config['process_condition'] == 'YES' && condition
-      write_weather_extras_file if extra_weather_fields_enabled?
+      write_weather_extras_file if extra_weather_announce_enabled?
       true
     ensure
       @http.close if @http
@@ -317,7 +318,7 @@ module SaytimeWeather
       return unless coords
 
       lat, lon = coords
-      if extra_weather_fields_enabled?
+      if extra_weather_data_needed?
         supplemental = fetch_openmeteo(lat, lon, include_extras: true)
         if supplemental
           write_timezone_file(supplemental[:timezone]) if supplemental[:timezone] && !supplemental[:timezone].empty?
@@ -345,10 +346,6 @@ module SaytimeWeather
 
         @weather_data[key] = val if @weather_data[key].nil?
       end
-    end
-
-    def extra_weather_fields_enabled?
-      SaytimeWeather::OPTIONAL_WEATHER_DISPLAY_KEYS.any? { |k| @config[k] == 'YES' }
     end
 
     def report_coordinate_failure(location, lat, lon, provider)
@@ -505,17 +502,17 @@ module SaytimeWeather
       temp_mode = @config['Temperature_mode']
       segments = []
 
-      if @config['show_humidity'] == 'YES' && weather_data[:humidity].is_a?(Numeric)
+      if optional_weather_announce_enabled?('show_humidity') && weather_data[:humidity].is_a?(Numeric)
         segments << { 'k' => 'humidity', 'v' => weather_data[:humidity].round }
       end
 
-      if @config['show_feels_like'] == 'YES' && weather_data[:feels_like].is_a?(Numeric)
+      if optional_weather_announce_enabled?('show_feels_like') && weather_data[:feels_like].is_a?(Numeric)
         val = weather_data[:feels_like]
         val = fahrenheit_to_celsius(val) if temp_mode == 'C'
         segments << { 'k' => 'feels_like', 'v' => val.round } if val
       end
 
-      if @config['show_dewpoint'] == 'YES' && weather_data[:dewpoint].is_a?(Numeric)
+      if optional_weather_announce_enabled?('show_dewpoint') && weather_data[:dewpoint].is_a?(Numeric)
         val = weather_data[:dewpoint]
         val = fahrenheit_to_celsius(val) if temp_mode == 'C'
         segments << { 'k' => 'dewpoint', 'v' => val.round } if val
@@ -525,11 +522,11 @@ module SaytimeWeather
       append_pressure_extra_segment(segments, weather_data, temp_mode)
       append_precip_extra_segment(segments, weather_data, temp_mode)
 
-      if @config['show_uv'] == 'YES' && weather_data[:uv_index].is_a?(Numeric)
+      if optional_weather_announce_enabled?('show_uv') && weather_data[:uv_index].is_a?(Numeric)
         segments << { 'k' => 'uv', 'v' => weather_data[:uv_index].round }
       end
 
-      if @config['show_visibility'] == 'YES' && weather_data[:visibility_m].is_a?(Numeric) &&
+      if optional_weather_announce_enabled?('show_visibility') && weather_data[:visibility_m].is_a?(Numeric) &&
          !weather_data[:visibility_m].negative?
         if temp_mode == 'F'
           mi = meters_to_miles(weather_data[:visibility_m])
@@ -548,7 +545,7 @@ module SaytimeWeather
     end
 
     def append_wind_extra_segment(segments, weather_data, temp_mode)
-      return unless @config['show_wind'] == 'YES' && weather_data[:wind_speed].is_a?(Numeric)
+      return unless optional_weather_announce_enabled?('show_wind') && weather_data[:wind_speed].is_a?(Numeric)
 
       wind_ms = weather_data[:wind_speed]
       return unless wind_ms.positive?
@@ -569,7 +566,7 @@ module SaytimeWeather
     end
 
     def append_pressure_extra_segment(segments, weather_data, temp_mode)
-      return unless @config['show_pressure'] == 'YES' && weather_data[:pressure].is_a?(Numeric)
+      return unless optional_weather_announce_enabled?('show_pressure') && weather_data[:pressure].is_a?(Numeric)
 
       pressure_hpa = weather_data[:pressure]
       if temp_mode == 'F'
@@ -581,15 +578,15 @@ module SaytimeWeather
     end
 
     def append_precip_extra_segment(segments, weather_data, temp_mode)
-      return unless @config['show_precipitation'] == 'YES' && weather_data[:precipitation].is_a?(Numeric)
+      return unless optional_weather_announce_enabled?('show_precipitation') && weather_data[:precipitation].is_a?(Numeric)
 
       precip_mm = weather_data[:precipitation]
-      show_precip = precip_mm.positive? || @config['show_zero_precip'] == 'YES'
-      if show_precip && precip_mm.positive?
+      announce_precip = precip_mm.positive? || @config['show_zero_precip'] == 'YES'
+      if announce_precip && precip_mm.positive?
         trace_threshold = @config['precip_trace_mm'].to_f
-        show_precip = false if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
+        announce_precip = false if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
       end
-      return unless show_precip && precip_mm.positive?
+      return unless announce_precip && precip_mm.positive?
 
       if temp_mode == 'F'
         precip_in = mm_to_inches(precip_mm)

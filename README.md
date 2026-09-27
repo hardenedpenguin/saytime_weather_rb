@@ -107,6 +107,8 @@ show_feels_like = NO
 show_dewpoint = NO
 show_uv = NO
 show_visibility = NO
+announce_feels_like = NO
+announce_humidity = NO
 show_zero_precip = NO
 precip_trace_mm = 0.10
 ```
@@ -178,31 +180,47 @@ Use a temporary config with `weather_provider = <name>` and `weather_provider_ra
 
 The following options control display of additional weather information. Units are automatically selected based on `Temperature_mode`.
 
-For **postal codes**, data comes from your configured weather provider. For **airport codes (IATA/ICAO)**, temperature and condition come from METAR; when any `show_*` option is `YES`, supplemental fields and timezone are filled from Open-Meteo using coordinates from the Our Airports database (when available).
+For **postal codes**, data comes from your configured weather provider. For **airport codes (IATA/ICAO)**, temperature and condition come from METAR; when any `show_*` or `announce_*` option is `YES`, supplemental fields and timezone are filled from Open-Meteo using coordinates from the Our Airports database (when available).
 
-- **show_precipitation**: `YES` to show precipitation (default: `NO`)
+- **show_precipitation**: `YES` to show precipitation in text output (default: `NO`)
+- **announce_precipitation**: `YES` to announce precipitation on radio (default: `NO`)
   - F mode: inches (in)
   - C mode: millimeters (mm)
-- **show_wind**: `YES` to show wind speed and direction (default: `NO`)
+- **show_wind** / **announce_wind**: text / radio (default: `NO` each)
   - F mode: miles per hour (mph)
   - C mode: kilometers per hour (km/h)
-- **show_pressure**: `YES` to show barometric pressure (default: `NO`)
+- **show_pressure** / **announce_pressure**: text / radio (default: `NO` each)
   - F mode: inches of mercury (inHG)
   - C mode: hectopascals (hPa)
-- **show_humidity**: `YES` to show relative humidity percentage (default: `NO`)
+- **show_humidity** / **announce_humidity**: text / radio (default: `NO` each)
   - Displays as "65% RH"
-- **show_feels_like**: `YES` to show apparent / feels-like temperature (default: `NO`)
+- **show_feels_like** / **announce_feels_like**: text / radio (default: `NO` each)
   - Uses heat index or wind chill from NWS when available; `apparent_temperature` from Open-Meteo
   - F mode: °F; C mode: °C
-- **show_dewpoint**: `YES` to show dewpoint (default: `NO`)
+- **show_dewpoint** / **announce_dewpoint**: text / radio (default: `NO` each)
   - F mode: °F; C mode: °C
-- **show_uv**: `YES` to show UV index (default: `NO`)
-- **show_visibility**: `YES` to show visibility (default: `NO`)
+- **show_uv** / **announce_uv**: text / radio (default: `NO` each)
+- **show_visibility** / **announce_visibility**: text / radio (default: `NO` each)
   - F mode: miles (mi); C mode: kilometers (km)
 - **show_zero_precip**: `YES` to show precipitation even when zero (default: `NO`)
   - If `NO`, precipitation is only shown when there's measurable precipitation
 - **precip_trace_mm**: Minimum precipitation threshold in millimeters (default: `0.10`)
   - Precipitation below this value is hidden unless `show_zero_precip = YES`
+
+**Optional field support by provider** (when `show_*` or `announce_*` is enabled, data is fetched if the provider supplies it):
+
+| Field | Open-Meteo | NWS | WeatherAPI | wttr.in | Met.no | 7Timer |
+|-------|:----------:|:---:|:----------:|:-------:|:------:|:------:|
+| Precipitation | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Wind | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Pressure | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Humidity | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Feels-like | ✓ | ✓ | ✓ | ✓ | — | — |
+| Dewpoint | ✓ | ✓ | ✓ | — | ✓ | — |
+| UV | ✓ | — | ✓ | — | — | — |
+| Visibility | ✓ | ✓ | ✓ | — | — | — |
+
+Airport METAR lookups use Open-Meteo at the airport coordinates for any enabled optional fields the METAR does not include. If a provider lacks a field, enable a different provider or rely on Open-Meteo fallback in random rotation.
 
 ## Usage
 
@@ -249,7 +267,7 @@ The format includes:
 - UV index (if `show_uv = YES`)
 - Visibility (if `show_visibility = YES`)
 
-All `show_*` options affect **text output** (`weather.rb … v` or stdout). When enabled, they also append to **radio audio** after the main temperature (humidity, feels-like, dewpoint, wind, pressure, precipitation, UV, visibility — in that order), provided the matching `wx/*.ulaw` sound files are installed.
+**Text vs radio:** `show_*` options control **text output** only (`weather.rb … v` or stdout). **`announce_*`** options control **radio audio** after the main temperature (humidity, feels-like, dewpoint, wind, pressure, precipitation, UV, visibility — in that order). Weather data is fetched when either `show_*` or `announce_*` is `YES` for a field. Radio announcements require matching `wx/*.ulaw` sound files.
 
 Generate optional announcement sounds on an ASL node with [asl-tts](https://wiki.allstarlink.org/):
 

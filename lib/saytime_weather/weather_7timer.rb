@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module Weather7Timer
+    include WeatherOptionalFields
+
     def fetch_weather_7timer(lat, lon)
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 
@@ -22,12 +26,12 @@ module SaytimeWeather
       return nil unless condition
 
       precipitation = nil
-      if @config['show_precipitation'] == 'YES'
+      if optional_weather_field_enabled?('show_precipitation')
         precipitation = seventimer_precip_amount_to_mm(cur['prec_amount'])
       end
 
       humidity = nil
-      if @config['show_humidity'] == 'YES'
+      if optional_weather_field_enabled?('show_humidity')
         rh = cur['rh2m']
         if rh.is_a?(String) && rh.end_with?('%')
           humidity = rh.delete('%').to_f
@@ -38,7 +42,7 @@ module SaytimeWeather
 
       wind_speed = nil
       wind_direction = nil
-      if @config['show_wind'] == 'YES' && cur['wind10m'].is_a?(Hash)
+      if optional_weather_field_enabled?('show_wind') && cur['wind10m'].is_a?(Hash)
         wind_speed = seventimer_wind_speed_to_ms(cur['wind10m']['speed'])
         wind_direction = seventimer_wind_dir_to_degrees(cur['wind10m']['direction'])
       end

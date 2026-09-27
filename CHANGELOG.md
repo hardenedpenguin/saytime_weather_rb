@@ -2,6 +2,12 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [0.0.35] - 2026-09-27
+
+### Added
+- **`announce_*` weather.ini options** (default `NO`): separate radio audio from text `show_*` fields — humidity, feels-like, dewpoint, wind, pressure, precipitation, UV, visibility.
+- Providers fetch supplemental data when either `show_*` or `announce_*` is enabled for a field.
+
 ## [0.0.34] - 2026-08-22
 
 ### Added

@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module WeatherWttr
+    include WeatherOptionalFields
+
     def fetch_weather_wttr(lat, lon)
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 
@@ -25,21 +29,21 @@ module SaytimeWeather
       return nil unless condition
 
       precipitation = nil
-      if @config['show_precipitation'] == 'YES'
+      if optional_weather_field_enabled?('show_precipitation')
         pmm = cur['precipMM']
         pmm = pmm.to_f if pmm.is_a?(String)
         precipitation = pmm if pmm.is_a?(Numeric)
       end
 
       humidity = nil
-      if @config['show_humidity'] == 'YES'
+      if optional_weather_field_enabled?('show_humidity')
         rh = cur['humidity']
         rh = rh.to_f if rh.is_a?(String)
         humidity = rh if rh.is_a?(Numeric)
       end
 
       pressure = nil
-      if @config['show_pressure'] == 'YES'
+      if optional_weather_field_enabled?('show_pressure')
         press = cur['pressure']
         press = press.to_f if press.is_a?(String)
         pressure = press if press.is_a?(Numeric)
@@ -48,7 +52,7 @@ module SaytimeWeather
       wind_speed = nil
       wind_direction = nil
       feels_like = nil
-      if @config['show_wind'] == 'YES'
+      if optional_weather_field_enabled?('show_wind')
         mph = cur['windspeedMiles']
         mph = mph.to_f if mph.is_a?(String)
         wind_speed = mph_to_ms(mph) if mph.is_a?(Numeric)
@@ -58,7 +62,7 @@ module SaytimeWeather
         wind_direction = wd if wd.is_a?(Numeric)
       end
 
-      if @config['show_feels_like'] == 'YES'
+      if optional_weather_field_enabled?('show_feels_like')
         fl = cur['FeelsLikeF']
         fl = fl.to_f if fl.is_a?(String)
         feels_like = fl if fl.is_a?(Numeric)

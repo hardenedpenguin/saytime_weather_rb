@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module WeatherMetNo
+    include WeatherOptionalFields
+
     def fetch_weather_metno(lat, lon)
       return nil if lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0
 
@@ -35,25 +39,34 @@ module SaytimeWeather
       return nil unless condition
 
       precipitation = nil
-      if @config['show_precipitation'] == 'YES' && ts['data']['next_1_hours'] && ts['data']['next_1_hours']['details']
+      if optional_weather_field_enabled?('show_precipitation') && ts['data']['next_1_hours'] && ts['data']['next_1_hours']['details']
         pmm = ts['data']['next_1_hours']['details']['precipitation_amount']
         precipitation = pmm if pmm.is_a?(Numeric)
       end
 
-      wind_speed = details['wind_speed']
-      wind_speed = nil unless wind_speed.is_a?(Numeric)
+      wind_speed = nil
+      wind_direction = nil
+      if optional_weather_field_enabled?('show_wind')
+        ws = details['wind_speed']
+        wind_speed = ws if ws.is_a?(Numeric)
+        wd = details['wind_from_direction']
+        wind_direction = wd if wd.is_a?(Numeric)
+      end
 
-      wind_direction = details['wind_from_direction']
-      wind_direction = nil unless wind_direction.is_a?(Numeric)
+      pressure = nil
+      if optional_weather_field_enabled?('show_pressure')
+        p = details['air_pressure_at_sea_level']
+        pressure = p if p.is_a?(Numeric)
+      end
 
-      pressure = details['air_pressure_at_sea_level']
-      pressure = nil unless pressure.is_a?(Numeric)
-
-      humidity = details['relative_humidity']
-      humidity = nil unless humidity.is_a?(Numeric)
+      humidity = nil
+      if optional_weather_field_enabled?('show_humidity')
+        rh = details['relative_humidity']
+        humidity = rh if rh.is_a?(Numeric)
+      end
 
       dewpoint = nil
-      if @config['show_dewpoint'] == 'YES'
+      if optional_weather_field_enabled?('show_dewpoint')
         dp_c = details['dew_point_temperature']
         dewpoint = celsius_to_fahrenheit(dp_c) if dp_c.is_a?(Numeric)
       end

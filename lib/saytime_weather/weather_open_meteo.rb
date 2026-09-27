@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module WeatherOpenMeteo
+    include WeatherOptionalFields
+
     def read_timezone_cache(lat, lon)
       path = Paths.timezone_cache_path(lat, lon)
       data = Cache.read_json(path, Network.timezone_cache_max_age)
@@ -19,16 +23,16 @@ module SaytimeWeather
       params = 'temperature_2m,weather_code,is_day'
       return params unless include_extras
 
-      params += ',precipitation' if @config['show_precipitation'] == 'YES'
-      if @config['show_wind'] == 'YES'
+      params += ',precipitation' if optional_weather_field_enabled?('show_precipitation')
+      if optional_weather_field_enabled?('show_wind')
         params += ',wind_speed_10m,wind_direction_10m,wind_gusts_10m'
       end
-      params += ',pressure_msl' if @config['show_pressure'] == 'YES'
-      params += ',relative_humidity_2m' if @config['show_humidity'] == 'YES'
-      params += ',apparent_temperature' if @config['show_feels_like'] == 'YES'
-      params += ',dew_point_2m' if @config['show_dewpoint'] == 'YES'
-      params += ',uv_index' if @config['show_uv'] == 'YES'
-      params += ',visibility' if @config['show_visibility'] == 'YES'
+      params += ',pressure_msl' if optional_weather_field_enabled?('show_pressure')
+      params += ',relative_humidity_2m' if optional_weather_field_enabled?('show_humidity')
+      params += ',apparent_temperature' if optional_weather_field_enabled?('show_feels_like')
+      params += ',dew_point_2m' if optional_weather_field_enabled?('show_dewpoint')
+      params += ',uv_index' if optional_weather_field_enabled?('show_uv')
+      params += ',visibility' if optional_weather_field_enabled?('show_visibility')
       params
     end
 
@@ -95,7 +99,10 @@ module SaytimeWeather
     end
 
     def fetch_weather_openmeteo(lat, lon)
-      data = fetch_openmeteo(lat, lon, include_extras: true)
+      include_extras = SaytimeWeather::OPTIONAL_WEATHER_DISPLAY_KEYS.any? do |show_key|
+        optional_weather_field_enabled?(show_key)
+      end
+      data = fetch_openmeteo(lat, lon, include_extras: include_extras)
       return nil unless data
 
       write_timezone_file(data[:timezone]) if data[:timezone] && !data[:timezone].empty?

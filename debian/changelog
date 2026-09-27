@@ -1,3 +1,11 @@
+saytime-weather-rb (0.0.35-1) unstable; urgency=medium
+
+  * announce_* weather.ini keys separate radio audio from show_* text output
+  * Providers fetch optional fields when show_* or announce_* is enabled
+  * Met.no optional-field gating; Open-Meteo skip extras when none enabled
+
+ -- Jory A. Pratt <geekypenguin@gmail.com>  Sun, 27 Sep 2026 09:45:00 -0500
+
 saytime-weather-rb (0.0.34-2) unstable; urgency=medium
 
   * Fix weather_audio_test humidity assertion (format_number 65 → 60 + 5)

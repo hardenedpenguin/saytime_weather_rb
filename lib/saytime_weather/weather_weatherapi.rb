@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require_relative 'weather_optional_fields'
+
 module SaytimeWeather
   module WeatherWeatherapi
+    include WeatherOptionalFields
+
     def weatherapi_key
       key = @config['weatherapi_key'].to_s.strip
       key = ENV['WEATHERAPI_KEY'].to_s.strip if key.empty?
@@ -95,21 +99,21 @@ module SaytimeWeather
       lon = nil unless lon.is_a?(Numeric)
 
       precipitation = nil
-      if @config['show_precipitation'] == 'YES'
+      if optional_weather_field_enabled?('show_precipitation')
         pmm = cur['precip_mm']
         pmm = pmm.to_f if pmm.is_a?(String)
         precipitation = pmm if pmm.is_a?(Numeric)
       end
 
       humidity = nil
-      if @config['show_humidity'] == 'YES'
+      if optional_weather_field_enabled?('show_humidity')
         rh = cur['humidity']
         rh = rh.to_f if rh.is_a?(String)
         humidity = rh if rh.is_a?(Numeric)
       end
 
       pressure = nil
-      if @config['show_pressure'] == 'YES'
+      if optional_weather_field_enabled?('show_pressure')
         mb = cur['pressure_mb']
         mb = mb.to_f if mb.is_a?(String)
         pressure = mb if mb.is_a?(Numeric)
@@ -122,7 +126,7 @@ module SaytimeWeather
       dewpoint = nil
       uv_index = nil
       visibility_m = nil
-      if @config['show_wind'] == 'YES'
+      if optional_weather_field_enabled?('show_wind')
         mph = cur['wind_mph']
         mph = mph.to_f if mph.is_a?(String)
         wind_speed = mph_to_ms(mph) if mph.is_a?(Numeric)
@@ -136,25 +140,25 @@ module SaytimeWeather
         wind_gusts = mph_to_ms(gust) if gust.is_a?(Numeric)
       end
 
-      if @config['show_feels_like'] == 'YES'
+      if optional_weather_field_enabled?('show_feels_like')
         fl = cur['feelslike_f']
         fl = fl.to_f if fl.is_a?(String)
         feels_like = fl if fl.is_a?(Numeric)
       end
 
-      if @config['show_dewpoint'] == 'YES'
+      if optional_weather_field_enabled?('show_dewpoint')
         dp = cur['dewpoint_f']
         dp = dp.to_f if dp.is_a?(String)
         dewpoint = dp if dp.is_a?(Numeric)
       end
 
-      if @config['show_uv'] == 'YES'
+      if optional_weather_field_enabled?('show_uv')
         uv = cur['uv']
         uv = uv.to_f if uv.is_a?(String)
         uv_index = uv if uv.is_a?(Numeric)
       end
 
-      if @config['show_visibility'] == 'YES'
+      if optional_weather_field_enabled?('show_visibility')
         vis_mi = cur['vis_miles']
         vis_mi = vis_mi.to_f if vis_mi.is_a?(String)
         visibility_m = vis_mi * 1609.344 if vis_mi.is_a?(Numeric)

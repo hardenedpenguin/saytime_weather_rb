@@ -61,6 +61,7 @@ test:
 	ruby -c lib/saytime_weather/weather_entry.rb
 	ruby -c lib/saytime_weather/weather_runner.rb
 	ruby -c lib/saytime_weather/weather_sound.rb
+	ruby -c lib/saytime_weather/weather_optional_fields.rb
 	@echo "Syntax checks passed!"
 
 test-unit:
