@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'tmpdir'
 require 'saytime_weather/config_error'
 require 'saytime_weather/weather_config'
 require 'saytime_weather/weather_helpers'
@@ -19,7 +20,9 @@ class WeatherConfigHarness
     @provider_explicitly_set = true
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert_raises(error_class, msg = nil)

@@ -15,7 +15,9 @@ class SaytimeConfigHarness
     @config = {}
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert(condition, msg)

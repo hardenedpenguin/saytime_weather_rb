@@ -23,7 +23,8 @@ module SaytimeWeather
     end
 
     def create_output_file(input_files, output_file)
-      File.open(output_file, 'wb') do |out|
+      # Atomic write: a symlink planted at output_file is replaced, never followed.
+      SaytimeWeather::RunContext.write_file_atomic(output_file) do |out|
         files = input_files.split(/\s+/).select { |f| f =~ /\.ulaw$/ }
         files_processed = 0
 
@@ -89,7 +90,9 @@ module SaytimeWeather
         error("  Exit code: #{exit_code}")
         error("  Hint: Verify Asterisk is running and node number is correct")
         @critical_error = true
+        return
       end
+      # Give Asterisk time to open the file before the run directory is cleaned up.
       sleep play_delay_seconds
     end
   end

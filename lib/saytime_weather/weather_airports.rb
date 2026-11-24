@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'csv'
+require 'fileutils'
 
 module SaytimeWeather
   module WeatherAirports
@@ -19,9 +20,8 @@ module SaytimeWeather
                        Endpoints::DEFAULT_HTTP_UA)
       return if body.nil? || body.empty?
 
-      tmp = "#{cache}.part"
-      File.write(tmp, body)
-      File.rename(tmp, cache)
+      FileUtils.mkdir_p(File.dirname(cache))
+      RunContext.write_file_atomic(cache, body)
     rescue => e
       warn("Airports data download failed: #{e.message}") if @options[:verbose]
     end

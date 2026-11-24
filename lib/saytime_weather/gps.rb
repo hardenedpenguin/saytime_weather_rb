@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'ipaddr'
+require 'resolv'
 require 'socket'
-require 'timeout'
 require 'time'
 
 module SaytimeWeather
@@ -77,21 +78,24 @@ module SaytimeWeather
       min_mode = gps_config_int('gps_min_mode', 2)
       max_age = gps_config_int('gps_max_age_seconds', 300)
 
-      Timeout.timeout(timeout_sec) do
-        Socket.tcp(host, port) do |sock|
-          sock.write("?WATCH={\"enable\":true,\"json\":true}\n")
-          deadline = Time.now + timeout_sec
-          while Time.now < deadline
-            line = sock.gets
-            break unless line
+      # One budget covers resolution, every connect attempt, and the reads.
+      deadline = monotonic_now + timeout_sec
+      sock = connect_before(host, port, deadline)
+      begin
+        sock.write("?WATCH={\"enable\":true,\"json\":true}\n")
+        buffer = +''
+        loop do
+          line = read_line_before(sock, buffer, deadline)
+          break unless line
 
-            obj = parse_gps_json(line)
-            next unless obj && obj['class'] == 'TPV'
-            next unless valid_tpv?(obj, min_mode, max_age)
+          obj = parse_gps_json(line)
+          next unless obj && obj['class'] == 'TPV'
+          next unless valid_tpv?(obj, min_mode, max_age)
 
-            return extract_fix(obj)
-          end
+          return extract_fix(obj)
         end
+      ensure
+        sock.close unless sock.closed?
       end
       nil
     rescue => e
@@ -100,7 +104,7 @@ module SaytimeWeather
     end
 
     def read_gps_from_gpspipe
-      return nil unless system('which', 'gpspipe', out: File::NULL, err: File::NULL)
+      return nil unless executable_in_path?('gpspipe')
 
       host = gps_host
       port = gps_port
@@ -112,9 +116,9 @@ module SaytimeWeather
       cmd += ['-h', host] unless host == '127.0.0.1'
       cmd += ['-p', port.to_s] unless port == 2947
 
-      output = nil
-      IO.popen(cmd, err: [:child, :out]) { |io| output = io.read }
-      return nil unless $?.success? && output
+      timeout_sec = gps_config_int('gps_timeout_seconds', 5)
+      output = read_command_output(cmd, timeout_sec)
+      return nil unless output
 
       output.each_line do |line|
         obj = parse_gps_json(line)
@@ -127,6 +131,113 @@ module SaytimeWeather
     rescue => e
       warn("GPS via gpspipe failed: #{e.message}") if @options[:verbose]
       nil
+    end
+
+    def monotonic_now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
+    # Open a TCP connection to gpsd, never past +deadline+ (monotonic seconds).
+    # Resolution and each address attempt get only the remaining budget, and no new
+    # attempt starts once it is spent. Raises the last error when nothing connects.
+    def connect_before(host, port, deadline)
+      last_error = nil
+      resolve_before(host, deadline).each do |ip|
+        remaining = deadline - monotonic_now
+        break if remaining <= 0
+
+        begin
+          return Socket.tcp(ip, port, connect_timeout: remaining)
+        rescue SystemCallError, SocketError => e
+          last_error = e
+        end
+      end
+      raise last_error || Errno::ETIMEDOUT.new("connect to #{host}:#{port}")
+    end
+
+    # IP literals skip resolution. Names use /etc/hosts, then DNS limited to the
+    # remaining budget (Resolv works on Ruby 2.7, unlike Socket.tcp resolv_timeout).
+    def resolve_before(host, deadline)
+      return [host] if ip_literal?(host)
+
+      addrs = Resolv::Hosts.new.getaddresses(host)
+      return addrs unless addrs.empty?
+
+      remaining = deadline - monotonic_now
+      raise Errno::ETIMEDOUT, "resolve #{host}" if remaining <= 0
+
+      Resolv::DNS.open do |dns|
+        dns.timeouts = remaining
+        addrs = dns.getresources(host, Resolv::DNS::Resource::IN::A).map { |r| r.address.to_s }
+        addrs += dns.getresources(host, Resolv::DNS::Resource::IN::AAAA).map { |r| r.address.to_s } if (deadline - monotonic_now).positive?
+      end
+      raise SocketError, "could not resolve #{host}" if addrs.empty?
+
+      addrs
+    end
+
+    def ip_literal?(host)
+      IPAddr.new(host)
+      true
+    rescue IPAddr::InvalidAddressError, ArgumentError
+      false
+    end
+
+    # Read one newline-terminated line, waiting at most until +deadline+ (monotonic seconds).
+    # Returns nil on timeout or EOF. Uses IO.select instead of Timeout.timeout, which can
+    # interrupt code at unsafe points.
+    def read_line_before(sock, buffer, deadline)
+      loop do
+        if (idx = buffer.index("\n"))
+          return buffer.slice!(0..idx)
+        end
+
+        remaining = deadline - monotonic_now
+        return nil if remaining <= 0
+        return nil unless IO.select([sock], nil, nil, remaining)
+
+        chunk = sock.read_nonblock(4096, exception: false)
+        next if chunk == :wait_readable
+        return nil if chunk.nil?
+
+        buffer << chunk
+        return nil if buffer.bytesize > 1_048_576
+      end
+    end
+
+    # Run +cmd+ and collect stdout for at most +timeout_sec+ seconds; the child is
+    # terminated if it is still running at the deadline (e.g. gpspipe waiting for samples).
+    def read_command_output(cmd, timeout_sec)
+      deadline = monotonic_now + timeout_sec
+      output = +''
+      IO.popen(cmd, err: File::NULL) do |io|
+        loop do
+          remaining = deadline - monotonic_now
+          break if remaining <= 0
+          break unless IO.select([io], nil, nil, remaining)
+
+          chunk = io.read_nonblock(4096, exception: false)
+          next if chunk == :wait_readable
+          break if chunk.nil?
+
+          output << chunk
+        end
+        unless io.closed?
+          begin
+            Process.kill('TERM', io.pid)
+          rescue Errno::ESRCH
+            nil
+          end
+        end
+      end
+      output.empty? ? nil : output
+    end
+
+    def executable_in_path?(name)
+      ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? do |dir|
+        path = File.join(dir, name)
+        File.file?(path) && File.executable?(path)
+      end
     end
 
     def parse_gps_json(line)

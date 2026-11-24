@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'constants'
+
 module SaytimeWeather
   module WeatherOptionalFields
     def optional_weather_field_enabled?(show_key)

@@ -24,13 +24,27 @@ class ProviderOrderHarness
     SaytimeWeather::Network.reset_defaults!
   end
 
-  def fetch_weather_nws(*) = nil
-  def fetch_weather_metno(*) = nil
-  def fetch_weather_wttr(*) = nil
-  def fetch_weather_7timer(*) = nil
-  def fetch_weather_weatherapi(*) = nil
-  def fetch_weather_openmeteo(*) = nil
-  def warn(*) = nil
+  def fetch_weather_nws(*)
+    nil
+  end
+  def fetch_weather_metno(*)
+    nil
+  end
+  def fetch_weather_wttr(*)
+    nil
+  end
+  def fetch_weather_7timer(*)
+    nil
+  end
+  def fetch_weather_weatherapi(*)
+    nil
+  end
+  def fetch_weather_openmeteo(*)
+    nil
+  end
+  def warn(*)
+    nil
+  end
 end
 
 def assert(condition, msg)

@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'json'
 require 'saytime_weather/weather_geocoding'
 require 'saytime_weather/weather_airports'
 require 'saytime_weather/weather_units'
@@ -31,7 +32,9 @@ class WeatherapiHarness
     @options = { verbose: false }
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert_equal(expected, actual, msg = nil)

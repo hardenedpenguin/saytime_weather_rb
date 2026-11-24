@@ -4,7 +4,7 @@ set -e
 # postrm script for saytime-weather-rb
 
 if [ "$1" = "purge" ]; then
-    :
+    rm -rf /var/cache/saytime-weather-rb
 fi
 
 #DEBHELPER#

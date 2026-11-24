@@ -9,6 +9,10 @@ on:
     tags:
       - 'v*'
 
+# Least privilege by default; jobs that publish raise it to contents: write.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,12 +50,27 @@ jobs:
           VERSION=$(dpkg-parsechangelog -SVersion)
           cp "../saytime-weather-rb_${VERSION}_all.deb" .
 
+      - name: Extract release notes for this version
+        run: |
+          VERSION=$(dpkg-parsechangelog -SVersion)
+          UPSTREAM="${VERSION%-*}"
+          awk -v hdr="## [${UPSTREAM}]" '
+            index($0, hdr) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::warning::No CHANGELOG.md section for ${UPSTREAM}; using debian/changelog entry."
+            dpkg-parsechangelog -SChanges | tail -n +4 > release-notes.md
+          fi
+          cat release-notes.md
+
       - name: Create Release and upload .deb
         uses: softprops/action-gh-release@v2
         with:
           files: "*.deb"
           generate_release_notes: false
-          body_path: CHANGELOG.md
+          body_path: release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

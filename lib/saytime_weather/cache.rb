@@ -2,6 +2,7 @@
 
 require 'json'
 require 'fileutils'
+require_relative 'run_context'
 
 module SaytimeWeather
   module Cache
@@ -19,11 +20,9 @@ module SaytimeWeather
     def write_json(path, data)
       dir = File.dirname(path)
       FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
-      tmp = "#{path}.part"
-      File.write(tmp, JSON.generate(data))
-      File.rename(tmp, path)
+      RunContext.write_file_atomic(path, JSON.generate(data))
       true
-    rescue
+    rescue StandardError
       false
     end
   end

@@ -3,6 +3,7 @@
 require 'json'
 require 'optparse'
 require 'fileutils'
+require_relative 'weather_runner'
 
 module SaytimeWeather
   class WeatherScript
@@ -23,6 +24,7 @@ module SaytimeWeather
     include WeatherProviders
     include WeatherGps
     include WeatherNumeric
+    include WeatherValues
 
     attr_reader :options, :config
 
@@ -45,6 +47,7 @@ module SaytimeWeather
       if options
         merge_runtime_options(options)
       else
+        @cli_mode = true
         parse_options
       end
 
@@ -53,54 +56,53 @@ module SaytimeWeather
     end
 
     def merge_runtime_options(opts)
-      @options[:verbose] = true if opts[:verbose]
-      @options[:config_file] = opts[:config_file] if opts[:config_file]
-      @options[:default_country] = opts[:default_country] if opts[:default_country]
-      @options[:temperature_mode] = opts[:temperature_mode].upcase if opts[:temperature_mode]
-      @options[:no_condition] = true if opts[:no_condition]
-      @options[:use_gps] = true if opts[:use_gps]
-      @options[:custom_sound_dir] = opts[:custom_sound_dir] if opts[:custom_sound_dir]
+      SaytimeWeather.normalize_weather_options(opts).each do |key, val|
+        @options[key] = key == :temperature_mode ? val.to_s.upcase : val
+      end
     end
 
     def parse_options
-      OptionParser.new do |opts|
-        opts.banner = "weather.rb version #{VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS] [location_id] [v]\n\n"
+      option_parser.parse!
+    end
 
-        opts.on('-c', '--config FILE', 'Use alternate configuration file') { |f| @options[:config_file] = f }
+    # Single definition of the CLI options; --help output is generated from it.
+    def option_parser
+      @option_parser ||= OptionParser.new do |opts|
+        opts.banner = "weather.rb version #{VERSION}\n\nUsage: weather.rb [OPTIONS] [location_id] [v]"
+        opts.separator ''
+        opts.separator 'Arguments:'
+        opts.separator '  location_id    Postal code, IATA, ICAO, lat,lon coordinates, or omit with --gps'
+        opts.separator '  v              Display text only (no sound output); place after location (see examples)'
+        opts.separator ''
+        opts.separator 'Examples:'
+        opts.separator '  weather.rb 77511 v              # display only'
+        opts.separator '  weather.rb -v 77511 v           # verbose display only'
+        opts.separator '  weather.rb --gps v              # GPS display only'
+        opts.separator ''
+        opts.separator 'Options:'
+        opts.summary_width = 24
+        opts.summary_indent = '  '
+
+        opts.on('-c', '--config FILE', 'Alternate configuration file') { |f| @options[:config_file] = f }
         opts.on('-d', '--default-country CC', 'Override default country') { |cc| @options[:default_country] = cc }
-        opts.on('-t', '--temperature-mode M', 'Override temperature mode (F or C)') { |m| @options[:temperature_mode] = m.upcase }
-        opts.on('--no-condition', 'Skip weather condition announcements') { @options[:no_condition] = true }
-        opts.on('--gps', 'Use GPS coordinates from gpsd (location_id optional)') { @options[:use_gps] = true }
-        opts.on('-v', '--verbose', 'Enable verbose output') { @options[:verbose] = true }
-        opts.on('-h', '--help', 'Show this help message') { show_usage; exit 0 }
-        opts.on('--version', 'Show version information') { puts "weather.rb version #{VERSION}"; exit 0 }
-      end.parse!
+        opts.on('-t', '--temperature-mode M', 'Temperature mode (F or C)') { |m| @options[:temperature_mode] = m.upcase }
+        opts.on('--no-condition', 'Skip condition sound files') { @options[:no_condition] = true }
+        opts.on('--gps', 'Use GPS via gpsd (see location_source = gps in weather.ini)') { @options[:use_gps] = true }
+        opts.on('-v', '--verbose', 'Verbose output') { @options[:verbose] = true }
+        opts.on('-h', '--help', 'This help') { show_usage; exit 0 }
+        opts.on('--version', 'Version information') { puts "weather.rb version #{VERSION}"; exit 0 }
+
+        opts.separator ''
+        opts.separator "Configuration: #{Paths.config_path}"
+        opts.separator 'GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.'
+        opts.separator 'Note: show_* adds text output; announce_* adds radio audio (requires wx sound files).'
+        opts.separator 'Generate optional wx sounds with scripts/generate_wx_extra_sounds.sh (asl-tts on ASL node).'
+        opts.separator 'Airport METAR: temp/condition from METAR; extras from Open-Meteo when enabled.'
+      end
     end
 
     def show_usage
-      puts "weather.rb version #{VERSION}\n\n"
-      puts "Usage: weather.rb [OPTIONS] [location_id] [v]\n\n"
-      puts "Arguments:"
-      puts "  location_id    Postal code, IATA, ICAO, lat,lon coordinates, or omit with --gps"
-      puts "  v              Display text only (no sound output); place after location (see examples)\n\n"
-      puts "Examples:"
-      puts "  weather.rb 77511 v              # display only"
-      puts "  weather.rb -v 77511 v          # verbose display only"
-      puts "  weather.rb --gps v              # GPS display only\n\n"
-      puts "Options:"
-      puts "  -c, --config FILE        Alternate configuration file"
-      puts "  -d, --default-country CC Override default country"
-      puts "  -t, --temperature-mode M Temperature mode (F or C)"
-      puts "  --no-condition           Skip condition sound files"
-      puts "  --gps                    Use GPS via gpsd (see location_source = gps in weather.ini)"
-      puts "  -v, --verbose            Verbose output"
-      puts "  -h, --help               This help"
-      puts "  --version                Version information\n\n"
-      puts "Configuration: #{Paths.config_path}\n"
-      puts "GPS: set location_source = gps in weather.ini or pass --gps. Requires gpsd.\n"
-      puts "Note: show_* adds text output; announce_* adds radio audio (requires wx sound files)."
-      puts "Generate optional wx sounds with scripts/generate_wx_extra_sounds.sh (asl-tts on ASL node)."
-      puts "Airport METAR: temp/condition from METAR; extras from Open-Meteo when enabled.\n"
+      puts option_parser.help
     end
 
   # Returns true on success, false on failure (does not exit).
@@ -109,7 +111,7 @@ module SaytimeWeather
       SaytimeWeather::RunContext.ensure_run!
       SaytimeWeather::RunContext.clear_legacy_scratch! if @owns_run_context
       @http.verbose = @options[:verbose]
-      display_only = display_only || (ARGV[1] if $PROGRAM_NAME == 'weather.rb')
+      display_only ||= cli_display_only_arg
 
       if gps_location_enabled?
         loc = location.to_s.strip
@@ -171,6 +173,16 @@ module SaytimeWeather
     end
 
     private
+
+    # Trailing `v` (display only) from the command line. Only honored when weather.rb is
+    # the entry point (not when saytime.rb runs weather in-process), regardless of how
+    # the script path appears in $PROGRAM_NAME (/usr/sbin/weather.rb, ./weather.rb, ...).
+    def cli_display_only_arg
+      return nil unless @cli_mode
+
+      args = gps_location_enabled? ? ARGV : ARGV.drop(1)
+      args.include?('v') ? 'v' : nil
+    end
 
     def fetch_weather_for_location(location)
       @weather_data = {}
@@ -359,182 +371,79 @@ module SaytimeWeather
       end
     end
 
+    # Text output (show_* keys). Values come from WeatherValues so text and audio agree.
     def build_output_line(temp_f_display, temp_c, condition)
-      temp_mode = @config['Temperature_mode']
-      weather_data = @weather_data || {}
-      output_parts = ["#{temp_f_display}°F, #{temp_c}°C"]
+      mode = @config['Temperature_mode']
+      data = @weather_data || {}
+      deg = mode == 'F' ? 'F' : 'C'
+      parts = ["#{temp_f_display}°F, #{temp_c}°C"]
 
-      if @config['show_humidity'] == 'YES' && weather_data[:humidity]
-        humidity_val = weather_data[:humidity]
-        output_parts << "#{humidity_val.round}% RH" if humidity_val.is_a?(Numeric)
+      if show?('show_humidity') && (rh = humidity_value(data))
+        parts << "#{rh}% RH"
+      end
+      if show?('show_feels_like') && (v = temperature_value(data[:feels_like], mode))
+        parts << "Feels like #{v}°#{deg}"
+      end
+      if show?('show_dewpoint') && (v = temperature_value(data[:dewpoint], mode))
+        parts << "Dewpoint #{v}°#{deg}"
       end
 
-      append_feels_like(output_parts, weather_data, temp_mode)
-      append_dewpoint(output_parts, weather_data, temp_mode)
+      parts << condition
 
-      output_parts << condition
-      append_precipitation(output_parts, weather_data, temp_mode)
-      append_wind(output_parts, weather_data, temp_mode)
-      append_pressure(output_parts, weather_data, temp_mode)
-      append_uv(output_parts, weather_data)
-      append_visibility(output_parts, weather_data, temp_mode)
-      output_parts.join(' / ')
+      if show?('show_precipitation') && (v = precipitation_value(data, mode, allow_zero: true))
+        parts << (mode == 'F' ? "Precip #{v} in" : "Precip #{v} mm")
+      end
+      if show?('show_wind') && (wind = wind_values(data, mode))
+        str = "Wind #{wind[:speed]} #{mode == 'F' ? 'mph' : 'km/h'}"
+        str += " #{wind[:dir]}" if wind[:dir]
+        str += " (gust #{wind[:gust]})" if wind[:gust]
+        parts << str
+      end
+      if show?('show_pressure') && (v = pressure_value(data, mode))
+        parts << (mode == 'F' ? "#{v} inHG" : "#{v} hPa")
+      end
+      if show?('show_uv') && (v = uv_value(data))
+        parts << "UV #{v}"
+      end
+      if show?('show_visibility') && (v = visibility_value(data, mode))
+        parts << (mode == 'F' ? "Visibility #{v} mi" : "Visibility #{v} km")
+      end
+
+      parts.join(' / ')
     end
 
-    def append_feels_like(output_parts, weather_data, temp_mode)
-      return unless @config['show_feels_like'] == 'YES'
-
-      f = weather_data[:feels_like]
-      return unless f.is_a?(Numeric)
-
-      if temp_mode == 'F'
-        output_parts << "Feels like #{f.round}°F"
-      else
-        c = fahrenheit_to_celsius(f)
-        output_parts << "Feels like #{c}°C" if c
-      end
-    end
-
-    def append_dewpoint(output_parts, weather_data, temp_mode)
-      return unless @config['show_dewpoint'] == 'YES'
-
-      f = weather_data[:dewpoint]
-      return unless f.is_a?(Numeric)
-
-      if temp_mode == 'F'
-        output_parts << "Dewpoint #{f.round}°F"
-      else
-        c = fahrenheit_to_celsius(f)
-        output_parts << "Dewpoint #{c}°C" if c
-      end
-    end
-
-    def append_uv(output_parts, weather_data)
-      return unless @config['show_uv'] == 'YES'
-
-      uv = weather_data[:uv_index]
-      return unless uv.is_a?(Numeric)
-
-      output_parts << "UV #{uv.round}"
-    end
-
-    def append_visibility(output_parts, weather_data, temp_mode)
-      return unless @config['show_visibility'] == 'YES'
-
-      vis_m = weather_data[:visibility_m]
-      return unless vis_m.is_a?(Numeric) && !vis_m.negative?
-
-      if temp_mode == 'F'
-        mi = meters_to_miles(vis_m)
-        output_parts << "Visibility #{mi} mi" if mi
-      else
-        km = meters_to_km(vis_m)
-        output_parts << "Visibility #{km} km" if km
-      end
-    end
-
-    def append_precipitation(output_parts, weather_data, temp_mode)
-      return unless @config['show_precipitation'] == 'YES' && weather_data[:precipitation]
-
-      precip_mm = weather_data[:precipitation]
-      return unless precip_mm.is_a?(Numeric)
-
-      show_precip = precip_mm > 0 || @config['show_zero_precip'] == 'YES'
-      if show_precip && precip_mm > 0
-        trace_threshold = @config['precip_trace_mm'].to_f
-        show_precip = false if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
-      end
-
-      return unless show_precip
-
-      if temp_mode == 'F'
-        precip_in = mm_to_inches(precip_mm)
-        output_parts << "Precip #{precip_in} in" if precip_in
-      else
-        output_parts << "Precip #{precip_mm.round(2)} mm"
-      end
-    end
-
-    def append_wind(output_parts, weather_data, temp_mode)
-      return unless @config['show_wind'] == 'YES' && weather_data[:wind_speed]
-
-      wind_ms = weather_data[:wind_speed]
-      return unless wind_ms.is_a?(Numeric) && wind_ms > 0
-
-      wind_str = 'Wind'
-      if temp_mode == 'F'
-        wind_mph = ms_to_mph(wind_ms)
-        wind_str += " #{wind_mph} mph" if wind_mph
-      else
-        wind_kmh = ms_to_kmh(wind_ms)
-        wind_str += " #{wind_kmh} km/h" if wind_kmh
-      end
-
-      if weather_data[:wind_direction].is_a?(Numeric)
-        dir = wind_direction_to_cardinal(weather_data[:wind_direction])
-        wind_str += " #{dir}" if dir
-      end
-
-      if weather_data[:wind_gusts].is_a?(Numeric) && weather_data[:wind_gusts] > wind_ms
-        gust = temp_mode == 'F' ? ms_to_mph(weather_data[:wind_gusts]) : ms_to_kmh(weather_data[:wind_gusts])
-        wind_str += " (gust #{gust})" if gust
-      end
-
-      output_parts << wind_str
-    end
-
-    def append_pressure(output_parts, weather_data, temp_mode)
-      return unless @config['show_pressure'] == 'YES' && weather_data[:pressure]
-
-      pressure_hpa = weather_data[:pressure]
-      return unless pressure_hpa.is_a?(Numeric)
-
-      if temp_mode == 'F'
-        pressure_inhg = hpa_to_inhg(pressure_hpa)
-        output_parts << "#{pressure_inhg} inHG" if pressure_inhg
-      else
-        output_parts << "#{pressure_hpa.round} hPa"
-      end
-    end
-
+    # Radio audio extras (announce_* keys) consumed by WeatherAudio via weather_extras.json.
     def write_weather_extras_file
-      weather_data = @weather_data || {}
-      temp_mode = @config['Temperature_mode']
+      mode = @config['Temperature_mode']
+      data = @weather_data || {}
       segments = []
 
-      if optional_weather_announce_enabled?('show_humidity') && weather_data[:humidity].is_a?(Numeric)
-        segments << { 'k' => 'humidity', 'v' => weather_data[:humidity].round }
+      if announce?('show_humidity') && (rh = humidity_value(data))
+        segments << { 'k' => 'humidity', 'v' => rh }
       end
-
-      if optional_weather_announce_enabled?('show_feels_like') && weather_data[:feels_like].is_a?(Numeric)
-        val = weather_data[:feels_like]
-        val = fahrenheit_to_celsius(val) if temp_mode == 'C'
-        segments << { 'k' => 'feels_like', 'v' => val.round } if val
+      if announce?('show_feels_like') && (v = temperature_value(data[:feels_like], mode))
+        segments << { 'k' => 'feels_like', 'v' => v }
       end
-
-      if optional_weather_announce_enabled?('show_dewpoint') && weather_data[:dewpoint].is_a?(Numeric)
-        val = weather_data[:dewpoint]
-        val = fahrenheit_to_celsius(val) if temp_mode == 'C'
-        segments << { 'k' => 'dewpoint', 'v' => val.round } if val
+      if announce?('show_dewpoint') && (v = temperature_value(data[:dewpoint], mode))
+        segments << { 'k' => 'dewpoint', 'v' => v }
       end
-
-      append_wind_extra_segment(segments, weather_data, temp_mode)
-      append_pressure_extra_segment(segments, weather_data, temp_mode)
-      append_precip_extra_segment(segments, weather_data, temp_mode)
-
-      if optional_weather_announce_enabled?('show_uv') && weather_data[:uv_index].is_a?(Numeric)
-        segments << { 'k' => 'uv', 'v' => weather_data[:uv_index].round }
+      if announce?('show_wind') && (wind = wind_values(data, mode))
+        segment = { 'k' => 'wind', 'speed' => wind[:speed] }
+        segment['dir'] = wind[:dir] if wind[:dir]
+        segment['gust'] = wind[:gust] if wind[:gust]
+        segments << segment
       end
-
-      if optional_weather_announce_enabled?('show_visibility') && weather_data[:visibility_m].is_a?(Numeric) &&
-         !weather_data[:visibility_m].negative?
-        if temp_mode == 'F'
-          mi = meters_to_miles(weather_data[:visibility_m])
-          segments << { 'k' => 'visibility', 'v' => mi } if mi
-        else
-          km = meters_to_km(weather_data[:visibility_m])
-          segments << { 'k' => 'visibility', 'v' => km } if km
-        end
+      if announce?('show_pressure') && (v = pressure_value(data, mode))
+        segments << { 'k' => 'pressure', 'v' => v }
+      end
+      if announce?('show_precipitation') && (v = precipitation_value(data, mode, allow_zero: false))
+        segments << { 'k' => 'precip', 'v' => v }
+      end
+      if announce?('show_uv') && (v = uv_value(data))
+        segments << { 'k' => 'uv', 'v' => v }
+      end
+      if announce?('show_visibility') && (v = visibility_value(data, mode))
+        segments << { 'k' => 'visibility', 'v' => v }
       end
 
       return if segments.empty?
@@ -544,56 +453,12 @@ module SaytimeWeather
       warn("Error writing weather extras file: #{e.message}")
     end
 
-    def append_wind_extra_segment(segments, weather_data, temp_mode)
-      return unless optional_weather_announce_enabled?('show_wind') && weather_data[:wind_speed].is_a?(Numeric)
-
-      wind_ms = weather_data[:wind_speed]
-      return unless wind_ms.positive?
-
-      speed = temp_mode == 'F' ? ms_to_mph(wind_ms) : ms_to_kmh(wind_ms)
-      return unless speed
-
-      segment = { 'k' => 'wind', 'speed' => speed.round }
-      if weather_data[:wind_direction].is_a?(Numeric)
-        dir = wind_direction_to_cardinal(weather_data[:wind_direction])
-        segment['dir'] = dir if dir
-      end
-      if weather_data[:wind_gusts].is_a?(Numeric) && weather_data[:wind_gusts] > wind_ms
-        gust = temp_mode == 'F' ? ms_to_mph(weather_data[:wind_gusts]) : ms_to_kmh(weather_data[:wind_gusts])
-        segment['gust'] = gust.round if gust
-      end
-      segments << segment
+    def show?(key)
+      @config[key] == 'YES'
     end
 
-    def append_pressure_extra_segment(segments, weather_data, temp_mode)
-      return unless optional_weather_announce_enabled?('show_pressure') && weather_data[:pressure].is_a?(Numeric)
-
-      pressure_hpa = weather_data[:pressure]
-      if temp_mode == 'F'
-        pressure_inhg = hpa_to_inhg(pressure_hpa)
-        segments << { 'k' => 'pressure', 'v' => pressure_inhg } if pressure_inhg
-      else
-        segments << { 'k' => 'pressure', 'v' => pressure_hpa.round }
-      end
-    end
-
-    def append_precip_extra_segment(segments, weather_data, temp_mode)
-      return unless optional_weather_announce_enabled?('show_precipitation') && weather_data[:precipitation].is_a?(Numeric)
-
-      precip_mm = weather_data[:precipitation]
-      announce_precip = precip_mm.positive? || @config['show_zero_precip'] == 'YES'
-      if announce_precip && precip_mm.positive?
-        trace_threshold = @config['precip_trace_mm'].to_f
-        announce_precip = false if precip_mm < trace_threshold && @config['show_zero_precip'] != 'YES'
-      end
-      return unless announce_precip && precip_mm.positive?
-
-      if temp_mode == 'F'
-        precip_in = mm_to_inches(precip_mm)
-        segments << { 'k' => 'precip', 'v' => precip_in } if precip_in
-      else
-        segments << { 'k' => 'precip', 'v' => precip_mm.round(2) }
-      end
+    def announce?(key)
+      optional_weather_announce_enabled?(key)
     end
 
     def write_temperature_file(temp_f, temp_c)

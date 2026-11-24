@@ -2,6 +2,37 @@
 
 All notable changes to saytime-weather-rb are documented here.
 
+## [Unreleased]
+
+### Security
+- **Saved announcement (`-s 1` / `-s 2`)**: `/tmp/current-time.ulaw` is written via a unique temp file and `rename`, so a symlink planted at that path is replaced instead of followed (closes the window between legacy cleanup and the write where a root cron run could be redirected to overwrite another file).
+- **Per-run scratch folder**: scratch files (`temperature`, `condition.ulaw`, `timezone`, `weather_extras.json`, combined audio) live in a freshly created `saytime-run-*` folder instead of predictable `/tmp` names; the folder is removed after each run.
+- **HTTP**: redirects from HTTPS to HTTP are refused.
+
+### Changed
+- **Caches moved to `/var/cache/saytime-weather-rb`** (created by `postinst`, owned by `asterisk`, removed on purge). Root cron and asterisk DTMF runs can now both update geocode, timezone, airport, and GPS caches; cache writes use unique temp names so concurrent runs do not corrupt each other. Override with `SAYTIME_CACHE_DIR`. Old `/tmp/saytime-*` cache files are cleaned up on upgrade.
+- **HTTP retries**: redirects are followed inside a single attempt (no nested retry loops); `Retry-After` on 429 responses is honored (capped at 10 s).
+- **GPS**: one `gps_timeout_seconds` budget now covers gpsd host resolution, every connect attempt (IPv4/IPv6 addresses no longer each get the full timeout), and the reads; gpsd reads use socket deadlines instead of `Timeout.timeout`; the `gpspipe` fallback is stopped at `gps_timeout_seconds` instead of possibly hanging; `which` is no longer spawned.
+- **Time zone lookup** no longer spawns `date(1)`; unknown zone names fall back to system local time instead of silently using UTC.
+- **Help text** for `weather.rb` and `saytime.rb` is generated from the option definitions.
+- Text (`show_*`) and audio (`announce_*`) optional fields share one set of unit/threshold helpers (`WeatherValues`).
+
+### Fixed
+- **`weather.rb <location> v`** display-only mode now works when run by path (e.g. `/usr/sbin/weather.rb`); previously it still wrote sound scratch files.
+- **`saytime.rb --weather-subprocess`** now finds the files written by `weather.rb` (it failed with "Temperature file not found").
+- **`-mplayback` / `-mlocalplay`** are no longer split into single-letter flags.
+- No playback delay after a failed Asterisk playback command.
+- `make test` syntax-checks every Ruby file (previously skipped `weather_audio.rb`); test runner prints its assertion count.
+- Tests no longer use Ruby 3-only endless method syntax (Ruby 2.7 is supported).
+- Every library file requires what it uses, so each test file runs on its own (`make test-standalone`); previously eight failed outside `test/all.rb`.
+- Tests use a temporary cache folder and no longer delete or write the real GPS and geocode caches.
+
+### CI
+- Tests run on Ruby 2.7, 3.1, and 3.3; the `.deb` is built and checked with `lintian` on every push.
+- Release notes contain only the released version's `CHANGELOG.md` section; a missing or blank section falls back to the `debian/changelog` entry.
+- Each test file is also run on its own; workflows default to read-only `GITHUB_TOKEN` permissions.
+- `debian/copyright` references `/usr/share/common-licenses/GPL-3` (lintian error).
+
 ## [0.0.35] - 2026-09-27
 
 ### Added

@@ -36,20 +36,40 @@ module SaytimeWeather
       nil
     end
 
+    ZONEINFO_DIRS = %w[/usr/share/zoneinfo /usr/lib/zoneinfo /usr/share/lib/zoneinfo].freeze
+
+    # Wall-clock time in +tz+ without spawning date(1). Ruby re-reads TZ when ENV['TZ']
+    # is assigned, so a temporary swap gives the zone's local fields; the result is
+    # rebuilt as a plain local Time with the same fields (what the announcer speaks).
     def time_in_timezone(tz)
-      time_parts = nil
-      IO.popen({ 'TZ' => tz }, ['date', '+%Y %m %d %H %M %S']) do |io|
-        time_parts = io.read.strip
+      return nil unless known_timezone?(tz)
+
+      prev = ENV['TZ']
+      fields = nil
+      begin
+        ENV['TZ'] = tz
+        now = Time.now
+        fields = [now.year, now.month, now.day, now.hour, now.min, now.sec]
+      ensure
+        prev.nil? ? ENV.delete('TZ') : ENV['TZ'] = prev
       end
 
-      return nil unless $?.success? && time_parts && !time_parts.empty?
-
-      parts = time_parts.split.map(&:to_i)
-      return nil unless parts.length >= 6
-
-      Time.new(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
-    rescue
+      Time.new(*fields)
+    rescue StandardError
       nil
+    end
+
+    # Unknown names silently fall back to UTC in libc; reject Area/City names that have
+    # no zoneinfo file so we fall back to system local time instead.
+    def known_timezone?(tz)
+      return false if tz.nil? || tz.empty?
+      return true unless tz.include?('/')
+      return false if tz.include?('..') || tz.start_with?('/')
+
+      dirs = ZONEINFO_DIRS.select { |d| File.directory?(d) }
+      return true if dirs.empty?
+
+      dirs.any? { |d| File.file?(File.join(d, tz)) }
     end
 
     # 24-hour clock (0–23) from the resolved announcement time. Greeting and a-m/p-m must
