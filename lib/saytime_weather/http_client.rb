@@ -2,11 +2,14 @@
 
 require 'net/http'
 require 'socket'
+require 'time'
 require 'uri'
 
 module SaytimeWeather
   class HttpClient
     NOT_RETRYABLE = :not_retryable
+    # Upper bound for honoring a server Retry-After header (announcements are time-sensitive).
+    MAX_RETRY_AFTER = 10
 
     attr_accessor :verbose
 
@@ -28,14 +31,21 @@ module SaytimeWeather
       return nil if max_redirects <= 0
 
       retries.times do |attempt|
+        @retry_after = nil
         result = get_once(url, timeout, user_agent, max_redirects)
         return result if result.is_a?(String)
         break if result == NOT_RETRYABLE
         next if attempt == retries - 1
 
-        sleep(retry_sleep)
+        sleep(retry_delay)
       end
       nil
+    end
+
+    def retry_delay
+      return retry_sleep unless @retry_after
+
+      [[@retry_after, retry_sleep].max, MAX_RETRY_AFTER].min
     end
 
     def close
@@ -47,7 +57,13 @@ module SaytimeWeather
       @connections.clear
     end
 
+    # Single attempt (redirects are followed here, without starting a new retry loop).
     def get_once(url, timeout, user_agent, max_redirects)
+      if max_redirects <= 0
+        w("Too many redirects for #{url}")
+        return NOT_RETRYABLE
+      end
+
       uri = URI(url)
       http = connection_for(uri, timeout)
 
@@ -67,9 +83,14 @@ module SaytimeWeather
           begin
             redirect_uri = URI(location)
             redirect_uri = uri + redirect_uri if redirect_uri.relative?
-            return get(redirect_uri.to_s, timeout, user_agent, max_redirects - 1)
-          rescue => e
+            if uri.scheme == 'https' && redirect_uri.scheme != 'https'
+              w("Refusing insecure redirect from #{uri.host} to #{redirect_uri}")
+              return NOT_RETRYABLE
+            end
+            return get_once(redirect_uri.to_s, timeout, user_agent, max_redirects - 1)
+          rescue URI::InvalidURIError => e
             w("Failed to follow redirect: #{e.message}")
+            return NOT_RETRYABLE
           end
         end
         nil
@@ -90,7 +111,8 @@ module SaytimeWeather
         end
         NOT_RETRYABLE
       when 429
-        w('Rate limited by server, please wait before retrying')
+        @retry_after = parse_retry_after(response['Retry-After'])
+        w("Rate limited by #{uri.host}#{@retry_after ? " (Retry-After #{@retry_after}s)" : ''}")
         nil
       else
         w("HTTP error #{response_code} from #{uri.host}")
@@ -111,6 +133,18 @@ module SaytimeWeather
     end
 
     private
+
+    # Retry-After is either delta-seconds or an HTTP date.
+    def parse_retry_after(value)
+      v = value.to_s.strip
+      return nil if v.empty?
+      return v.to_i if v.match?(/\A\d+\z/)
+
+      secs = (Time.httpdate(v) - Time.now).ceil
+      secs.positive? ? secs : 0
+    rescue ArgumentError
+      nil
+    end
 
     def connection_for(uri, timeout)
       key = "#{uri.scheme}://#{uri.host}:#{uri.port}"
