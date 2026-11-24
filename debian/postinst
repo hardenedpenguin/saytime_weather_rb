@@ -21,6 +21,24 @@ if [ "$1" = "configure" ]; then
         fi
     fi
     
+    # Persistent cache (geocode, timezone, airports, GPS fix). Owned by asterisk so both
+    # root cron runs and asterisk DTMF runs can update entries in place.
+    CACHE_DIR="/var/cache/saytime-weather-rb"
+    if [ ! -d "$CACHE_DIR" ]; then
+        mkdir -p "$CACHE_DIR"
+    fi
+    chown asterisk:asterisk "$CACHE_DIR" 2>/dev/null || true
+    chmod 755 "$CACHE_DIR"
+    # Old releases kept caches in /tmp under fixed names; remove them (never follow links).
+    for old in /tmp/saytime-geocode-*.json /tmp/saytime-timezone-*.json \
+               /tmp/saytime-weather-ourairports.csv /tmp/saytime-weather-ourairports.csv.part \
+               /tmp/saytime-weather-airports-maps.json /tmp/saytime-weather-airports-maps.json.part \
+               /tmp/saytime-gps-fix.json /tmp/saytime-gps-fix.json.part; do
+        if [ -f "$old" ] || [ -L "$old" ]; then
+            rm -f "$old"
+        fi
+    done
+
     # Set ownership for all installed files
     if [ -d /usr/sbin ]; then
         chown asterisk:asterisk /usr/sbin/weather.rb /usr/sbin/saytime.rb 2>/dev/null || true

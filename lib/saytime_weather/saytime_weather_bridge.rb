@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'rbconfig'
+
 module SaytimeWeather
   module SaytimeWeatherBridge
     include WeatherAudio
@@ -44,10 +46,12 @@ module SaytimeWeather
       weather_script = Paths.weather_script_path
       args = weather_subprocess_argv(location_id)
 
+      # Share this run's scratch directory so saytime can read the files weather.rb writes.
+      env = SaytimeWeather::RunContext.child_env
       if File.executable?(weather_script)
-        system(weather_script, *args)
+        system(env, weather_script, *args)
       else
-        system('ruby', weather_script, *args)
+        system(env, RbConfig.ruby, weather_script, *args)
       end
     end
 

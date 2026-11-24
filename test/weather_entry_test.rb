@@ -17,7 +17,9 @@ assert(SaytimeWeather::WeatherNumeric.respond_to?(:numeric_temp?),
 
 SaytimeWeather::RunContext.begin_run!
 path = SaytimeWeather::RunContext.scoped_tmp_path('temperature')
-assert(path.include?('temperature.'), "scoped path should include run id (#{path})")
+run_id = SaytimeWeather::RunContext.run_id
+assert(File.basename(path) == 'temperature', "scoped file keeps its name (#{path})")
+assert(File.dirname(path).include?(run_id), "scoped path should be in a per-run directory (#{path})")
 SaytimeWeather::RunContext.cleanup!
 
 puts 'weather_entry_test: ok'

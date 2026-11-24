@@ -71,9 +71,8 @@ class GeocodingConfigTest
   end
 
   def write_geocode_cache(tmp_dir, country, postal, lat, lon)
-    key = "#{country}-#{postal}"
-    safe = key.gsub(/[^a-zA-Z0-9._-]/, '_')
-    path = File.join(tmp_dir, "saytime-geocode-#{safe}.json")
+    path = SaytimeWeather::Paths.geocode_cache_path("#{country}-#{postal}")
+    FileUtils.mkdir_p(File.dirname(path))
     File.write(path, JSON.generate('lat' => lat, 'lon' => lon))
   end
 

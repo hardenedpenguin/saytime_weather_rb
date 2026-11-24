@@ -12,6 +12,36 @@ module SaytimeWeather
       ENV.fetch('WEATHER_CONFIG', '/etc/asterisk/local/weather.ini')
     end
 
+    DEFAULT_CACHE_DIR = '/var/cache/saytime-weather-rb'
+
+    # Persistent cache directory (geocode, timezone, airports, GPS fix).
+    # Order: SAYTIME_CACHE_DIR, the package cache dir (created by postinst, owned by
+    # asterisk so both root cron and asterisk DTMF runs can update it), then a per-user
+    # directory under tmp_dir. A per-user tmp directory that is not owned by us (for
+    # example one pre-created by another user) is never used; caching then falls back
+    # to the current run's private scratch directory.
+    def cache_dir
+      env = ENV['SAYTIME_CACHE_DIR'].to_s.strip
+      return env unless env.empty?
+      return DEFAULT_CACHE_DIR if usable_cache_dir?(DEFAULT_CACHE_DIR)
+
+      per_user = File.join(tmp_dir, "saytime-weather-cache-#{Process.uid}")
+      begin
+        Dir.mkdir(per_user, 0o700) unless File.exist?(per_user) || File.symlink?(per_user)
+      rescue SystemCallError
+        nil
+      end
+      return per_user if usable_cache_dir?(per_user) && File.stat(per_user).owned?
+
+      SaytimeWeather::RunContext.run_dir
+    end
+
+    def usable_cache_dir?(dir)
+      File.directory?(dir) && !File.symlink?(dir) && File.writable?(dir)
+    rescue SystemCallError
+      false
+    end
+
     def asterisk_sounds_en
       ENV.fetch('SAYTIME_SOUND_ROOT', '/usr/share/asterisk/sounds/en')
     end
@@ -29,24 +59,24 @@ module SaytimeWeather
     end
 
     def airports_cache_path
-      File.join(tmp_dir, 'saytime-weather-ourairports.csv')
+      File.join(cache_dir, 'ourairports.csv')
     end
 
     def geocode_cache_path(key)
       safe = key.to_s.gsub(/[^a-zA-Z0-9._-]/, '_')
-      File.join(tmp_dir, "saytime-geocode-#{safe}.json")
+      File.join(cache_dir, "geocode-#{safe}.json")
     end
 
     def timezone_cache_path(lat, lon)
-      File.join(tmp_dir, "saytime-timezone-#{lat.round(2)}_#{lon.round(2)}.json")
+      File.join(cache_dir, "timezone-#{lat.round(2)}_#{lon.round(2)}.json")
     end
 
     def airports_maps_cache_path
-      File.join(tmp_dir, 'saytime-weather-airports-maps.json')
+      File.join(cache_dir, 'airports-maps.json')
     end
 
     def gps_fix_cache_path
-      File.join(tmp_dir, 'saytime-gps-fix.json')
+      File.join(cache_dir, 'gps-fix.json')
     end
 
     def weather_script_path
