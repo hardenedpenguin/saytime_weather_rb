@@ -19,7 +19,9 @@ class WeatherConfigHarness
     @provider_explicitly_set = true
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert_raises(error_class, msg = nil)

@@ -36,8 +36,11 @@ class TestRunner
     load File.expand_path('saytime_config_test.rb', __dir__)
     load File.expand_path('weather_entry_test.rb', __dir__)
     load File.expand_path('run_context_test.rb', __dir__)
-    puts "All #{@count} tests passed."
+    load File.expand_path('hardening_test.rb', __dir__)
+    puts "All tests passed (#{t.count} core assertions)."
   end
+
+  attr_reader :count
 
   def initialize
     @count = 0

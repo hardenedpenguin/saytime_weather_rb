@@ -19,50 +19,15 @@ install:
 package:
 	dpkg-buildpackage -us -uc -b
 
+# Syntax-check every Ruby file (new modules are picked up automatically).
+RUBY_SOURCES := weather.rb saytime.rb $(shell find lib test -name '*.rb' | sort)
+
 test:
 	@echo "Running basic syntax checks..."
-	ruby -c weather.rb
-	ruby -c saytime.rb
-	ruby -c lib/saytime_weather.rb
-	ruby -c lib/saytime_weather/version.rb
-	ruby -c lib/saytime_weather/paths.rb
-	ruby -c lib/saytime_weather/network.rb
-	ruby -c lib/saytime_weather/endpoints.rb
-	ruby -c lib/saytime_weather/cache.rb
-	ruby -c lib/saytime_weather/sound_index.rb
-	ruby -c lib/saytime_weather/run_context.rb
-	ruby -c lib/saytime_weather/weather_numeric.rb
-	ruby -c lib/saytime_weather/gps.rb
-	ruby -c lib/saytime_weather/http_client.rb
-	ruby -c lib/saytime_weather/constants.rb
-	ruby -c lib/saytime_weather/ini.rb
-	ruby -c lib/saytime_weather/saytime_logging.rb
-	ruby -c lib/saytime_weather/saytime_config.rb
-	ruby -c lib/saytime_weather/saytime_cli.rb
-	ruby -c lib/saytime_weather/saytime_playback.rb
-	ruby -c lib/saytime_weather/saytime_time.rb
-	ruby -c lib/saytime_weather/saytime_weather_bridge.rb
-	ruby -c lib/saytime_weather/weather_helpers.rb
-	ruby -c lib/saytime_weather/weather_units.rb
-	ruby -c lib/saytime_weather/config_error.rb
-	ruby -c lib/saytime_weather/weather_config.rb
-	ruby -c lib/saytime_weather/weather_geocoding.rb
-	ruby -c lib/saytime_weather/weather_airports.rb
-	ruby -c lib/saytime_weather/weather_metar.rb
-	ruby -c lib/saytime_weather/weather_open_meteo.rb
-	ruby -c lib/saytime_weather/weather_nws.rb
-	ruby -c lib/saytime_weather/weather_metno.rb
-	ruby -c lib/saytime_weather/weather_wttr.rb
-	ruby -c lib/saytime_weather/weather_7timer.rb
-	ruby -c lib/saytime_weather/weather_weatherapi.rb
-	ruby -c lib/saytime_weather/weather_conditions.rb
-	ruby -c lib/saytime_weather/weather_providers.rb
-	ruby -c lib/saytime_weather/weather_script.rb
-	ruby -c lib/saytime_weather/weather_entry.rb
-	ruby -c lib/saytime_weather/weather_runner.rb
-	ruby -c lib/saytime_weather/weather_sound.rb
-	ruby -c lib/saytime_weather/weather_optional_fields.rb
-	@echo "Syntax checks passed!"
+	@for f in $(RUBY_SOURCES); do \
+		ruby -c "$$f" >/dev/null || { echo "Syntax error in $$f"; exit 1; }; \
+	done
+	@echo "Syntax checks passed ($(words $(RUBY_SOURCES)) files)!"
 
 test-unit:
 	ruby test/all.rb

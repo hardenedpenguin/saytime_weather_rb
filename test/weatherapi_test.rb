@@ -31,7 +31,9 @@ class WeatherapiHarness
     @options = { verbose: false }
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert_equal(expected, actual, msg = nil)

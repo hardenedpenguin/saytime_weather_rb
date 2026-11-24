@@ -9,10 +9,18 @@ class GpsWeatherRunHarness < SaytimeWeather::WeatherScript
     ['72', 'Clear', 'test']
   end
 
-  def write_temperature_file(*) = true
-  def process_weather_condition(*) = true
-  def cleanup_old_files = nil
-  def error(*) = nil
+  def write_temperature_file(*)
+    true
+  end
+  def process_weather_condition(*)
+    true
+  end
+  def cleanup_old_files
+    nil
+  end
+  def error(*)
+    nil
+  end
 end
 
 def assert(condition, msg)

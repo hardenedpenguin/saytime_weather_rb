@@ -20,7 +20,9 @@ class GpsHarness
     @explicit_location = options[:explicit_location]
   end
 
-  def warn(*) = nil
+  def warn(*)
+    nil
+  end
 end
 
 def assert(condition, msg)

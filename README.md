@@ -34,10 +34,11 @@ Optional **environment variables** (defaults suit ASL3 / typical Linux installs)
 
 | Variable | Purpose |
 |----------|---------|
-| `SAYTIME_TMP` | Directory for temperature/timezone scratch files (default `/tmp`) |
+| `SAYTIME_TMP` | Base directory for per-run scratch folders (default `/tmp`) |
+| `SAYTIME_CACHE_DIR` | Geocode, timezone, airport, and GPS fix caches (default `/var/cache/saytime-weather-rb`, created by the package; falls back to a private per-user folder under `SAYTIME_TMP`) |
 | `SAYTIME_FILE_OWNER` | When running as root, `-s 1` / `-s 2` save output is `chown`ed to this user (default `asterisk`) |
 
-Cron and DTMF (`*C1`) normally use default **silent=0** (play only). Scratch files are removed after each run so a root cron job does not leave root-owned `/tmp` files that block the `asterisk` user. Use **`-s 1`** or **`-s 2`** only when you intentionally want `/tmp/current-time.ulaw` kept.
+Cron and DTMF (`*C1`) normally use default **silent=0** (play only). Each run writes its scratch files into its own freshly created folder (`/tmp/saytime-run-*`), which is removed when the run ends, so a root cron job does not leave root-owned `/tmp` files that block the `asterisk` user and concurrent runs cannot collide. The saved `-s 1` / `-s 2` file is written atomically, so a symlink planted at that path is replaced rather than followed. Use **`-s 1`** or **`-s 2`** only when you intentionally want `/tmp/current-time.ulaw` kept.
 | `WEATHER_CONFIG` | Path to `weather.ini` (default `/etc/asterisk/local/weather.ini`) |
 | `WEATHERAPI_KEY` | WeatherAPI.com key when `weather_provider = weatherapi` (overrides ini if `weatherapi_key` is unset) |
 | `SAYTIME_SOUND_ROOT` | Base Asterisk English sounds directory (default `/usr/share/asterisk/sounds/en`) |
@@ -244,7 +245,7 @@ sudo /usr/sbin/weather.rb 75001 v                  # Display text only (verbose 
 
 Options: `-d, --default-country CC`, `-c, --config FILE`, `-t, --temperature-mode M`, `--no-condition`, `--gps`, `-v, --verbose`, `-h, --help`
 
-**IATA → ICAO:** The script loads the public [Our Airports](https://ourairports.com/data.html) CSV over HTTPS and caches it under `/tmp/saytime-weather-ourairports.csv` (refreshed when older than seven days). If the registry cannot be fetched and there is no cache yet, unknown three-letter codes fall back to `K` + IATA (US-style), which may be wrong outside the US.
+**IATA → ICAO:** The script loads the public [Our Airports](https://ourairports.com/data.html) CSV over HTTPS and caches it under `/var/cache/saytime-weather-rb/ourairports.csv` (refreshed when older than seven days). If the registry cannot be fetched and there is no cache yet, unknown three-letter codes fall back to `K` + IATA (US-style), which may be wrong outside the US.
 
 ### Output Format
 
@@ -312,7 +313,7 @@ Common options: `-u, --use_24hour`, `-d, --default-country CC`, `-c, --config FI
 
 ### GPS location
 
-Set `location_source = gps` in `weather.ini`, or pass `--gps` on the command line. Coordinates come from **gpsd** (recommended; package `Recommends: gpsd`). If gpsd is unavailable, the app tries `gpspipe` when installed. The last good fix is cached under `/tmp/saytime-gps-fix.json`.
+Set `location_source = gps` in `weather.ini`, or pass `--gps` on the command line. Coordinates come from **gpsd** (recommended; package `Recommends: gpsd`). If gpsd is unavailable, the app tries `gpspipe` when installed. The last good fix is cached under `/var/cache/saytime-weather-rb/gps-fix.json`. Both gpsd and `gpspipe` reads stop after `gps_timeout_seconds`.
 
 **GPS setup script:** For a guided install of gpsd (shared on `127.0.0.1:2947` for saytime and other clients) plus Asterisk APRS/`app_gps` wiring, use [setup-asl3-gps.rb](https://github.com/hardenedpenguin/asl-misc-scripts/blob/main/setup-asl3-gps.rb) from [hardenedpenguin/asl-misc-scripts](https://github.com/hardenedpenguin/asl-misc-scripts):
 

@@ -16,7 +16,9 @@ class MetnoOptionalHarness
     @options = { verbose: false }
   end
 
-  def safe_decode_json(_) = nil
+  def safe_decode_json(_)
+    nil
+  end
 end
 
 def assert(condition, msg)
