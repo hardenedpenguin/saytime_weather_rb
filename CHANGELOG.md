@@ -4,6 +4,8 @@ All notable changes to saytime-weather-rb are documented here.
 
 ## [Unreleased]
 
+## [0.0.36] - 2026-11-23
+
 ### Security
 - **Saved announcement (`-s 1` / `-s 2`)**: `/tmp/current-time.ulaw` is written via a unique temp file and `rename`, so a symlink planted at that path is replaced instead of followed (closes the window between legacy cleanup and the write where a root cron run could be redirected to overwrite another file).
 - **Per-run scratch folder**: scratch files (`temperature`, `condition.ulaw`, `timezone`, `weather_extras.json`, combined audio) live in a freshly created `saytime-run-*` folder instead of predictable `/tmp` names; the folder is removed after each run.
