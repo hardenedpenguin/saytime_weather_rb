@@ -29,9 +29,15 @@ class SaytimeCliHarness
     }
   end
 
-  def error(*) = nil
-  def show_usage = nil
-  def gps_weather_enabled? = false
+  def error(*)
+    nil
+  end
+  def show_usage
+    nil
+  end
+  def gps_weather_enabled?
+    false
+  end
 end
 
 def assert_equal(expected, actual, msg = nil)
@@ -51,7 +57,10 @@ h = SaytimeCliHarness.new
   [%w[-m playback -n 546052], 'playback'],
   [%w[-m localplay -n 546052], 'localplay'],
   [%w[-n 546052], 'localplay'],
-  [%w[-n546052], 'localplay', '546052']
+  [%w[-n546052], 'localplay', '546052'],
+  [%w[-mplayback -n 546052], 'playback'],
+  [%w[-mlocalplay -n 546052], 'localplay'],
+  [%w[-mLOCALPLAY -n 546052], 'localplay']
 ].each do |argv, expected_method, expected_node|
   ARGV.replace(argv.dup)
   h.parse_options

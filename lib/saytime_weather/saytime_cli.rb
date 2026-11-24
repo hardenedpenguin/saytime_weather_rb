@@ -10,7 +10,7 @@ module SaytimeWeather
       argv.each do |arg|
         if !arg.start_with?('--') && (m = arg.match(/\A-([a-zA-Z]{2,})\z/))
           letters = m[1]
-          if letters.match?(/\A[a-zA-Z]\d/)
+          if letters.match?(/\A[a-zA-Z]\d/) || letters.match?(/\Am(playback|localplay)\z/i)
             out << arg
           else
             letters.each_char { |c| out << "-#{c}" }
@@ -44,135 +44,92 @@ module SaytimeWeather
 
     def parse_options
       ARGV.replace(prepare_argv(ARGV))
+      option_parser.parse!
+      @options[:node_number] ||= ARGV[0] if ARGV[0]
+    end
 
-      parser = OptionParser.new do |opts|
-        opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
+    # Single definition of the CLI options; --help output is generated from it.
+    def option_parser
+      @option_parser ||= OptionParser.new do |opts|
+        opts.banner = "saytime.rb version #{SaytimeWeather::VERSION}\n\nUsage: saytime.rb [OPTIONS]"
+        opts.separator ''
+        opts.separator 'Options:'
+        opts.summary_width = 24
+        opts.summary_indent = '  '
 
-        opts.on('-l', '--location_id=ID', 'Location ID for weather (optional when GPS enabled)') do |id|
+        opts.on('-l', '--location_id=ID',
+                'Location ID for weather (optional with --gps or location_source=gps)') do |id|
           @options[:location_id] = id
         end
-
         opts.on('-n', '--node_number=NUM', 'Node number for announcement (required)') do |num|
           @options[:node_number] = num
         end
-
-        opts.on('-s', '--silent=NUM', Integer, 'Silent mode: 0=voice, 1=save both, 2=weather only (default: 0)') do |num|
+        opts.on('-s', '--silent=NUM', Integer, 'Silent mode (default: 0)',
+                '0=play (scratch files removed after run)',
+                '1=save time+weather to /tmp/current-time.ulaw',
+                '2=save weather only to /tmp/current-time.ulaw') do |num|
           @options[:silent] = num
         end
-
-        opts.on('-u', '--use_24hour', 'Use 24-hour clock (default: 12-hour)') do
-          @options[:use_24hour] = true
-        end
-
         opts.on('-h', '--help', 'Show this help message') do
           show_usage
           exit 0
         end
-
-        opts.on('-v', '--verbose', 'Enable verbose output') do
-          @options[:verbose] = true
-        end
-
-        opts.on('--dry-run', "Don't actually play or save files") do
-          @options[:dry_run] = true
-        end
-
-        opts.on('-d', '--default-country CC', 'Override default country for weather lookups (us, ca, fr, de, uk, etc.)') do |cc|
+        opts.on('-u', '--use_24hour', 'Use 24-hour clock (default: 12-hour)') { @options[:use_24hour] = true }
+        opts.on('-v', '--verbose', 'Enable verbose output (default: off)') { @options[:verbose] = true }
+        opts.on('--dry-run', "Don't actually play or save files (default: off)") { @options[:dry_run] = true }
+        opts.on('-d', '--default-country CC',
+                'Override default country for weather (us, ca, fr, de, uk, etc.)') do |cc|
           @options[:default_country] = cc
         end
-
-        opts.on('-c', '--config FILE', 'Path to weather.ini (passed to weather.rb)') do |f|
-          @options[:config_file] = f
-        end
-
-        opts.on('--weather-subprocess', 'Run weather.rb as a subprocess instead of in-process') do
-          @options[:weather_subprocess] = true
-        end
-
-        opts.on('--gps', 'Use GPS coordinates from gpsd (location_id optional)') do
+        opts.on('-c', '--config FILE', 'Path to weather.ini for weather lookups') { |f| @options[:config_file] = f }
+        opts.on('--gps', 'Use GPS via gpsd (or set location_source = gps in weather.ini)') do
           @options[:use_gps] = true
         end
-
-        opts.on('-t', '--test', 'Log playback command instead of executing') do
+        opts.on('--weather-subprocess', 'Run weather.rb as subprocess (default: in-process)') do
+          @options[:weather_subprocess] = true
+        end
+        opts.on('-t', '--test', 'Log playback command instead of executing (default: off)') do
           @options[:test_mode] = true
         end
-
-        opts.on('-w', '--weather', 'Enable weather announcements (default: on)') do
-          @options[:weather_enabled] = true
-        end
-
-        opts.on('--no-weather', 'Disable weather announcements') do
-          @options[:weather_enabled] = false
-        end
-
-        opts.on('-g', '--greeting', 'Enable greeting messages (default: on)') do
-          @options[:greeting_enabled] = true
-        end
-
-        opts.on('--no-greeting', 'Disable greeting messages') do
-          @options[:greeting_enabled] = false
-        end
-
-        opts.on('-m METHOD', '-mMETHOD', '--method=METHOD',
-                'Use Asterisk playback (-m alone), or set method to localplay or playback (default: localplay)') do |method|
+        opts.on('-w', '--weather', 'Enable weather announcements (default: on)') { @options[:weather_enabled] = true }
+        opts.on('--no-weather', 'Disable weather announcements') { @options[:weather_enabled] = false }
+        opts.on('-g', '--greeting', 'Enable greeting messages (default: on)') { @options[:greeting_enabled] = true }
+        opts.on('--no-greeting', 'Disable greeting messages') { @options[:greeting_enabled] = false }
+        opts.on('-m', '--method=METHOD',
+                'Use -m alone for playback, or pass localplay|playback (default: localplay)') do |method|
           @options[:play_method] = method.downcase
         end
-
-        opts.on('--sound-dir=DIR', 'Use custom sound directory') do |dir|
+        opts.on('--sound-dir=DIR', 'Use custom sound directory',
+                "(default: #{SaytimeWeather::Paths.asterisk_sounds_en})") do |dir|
           @options[:custom_sound_dir] = dir
         end
+        opts.on('--log=FILE', 'Log to specified file (default: none)') { |file| @options[:log_file] = file }
 
-        opts.on('--log=FILE', 'Log to specified file') do |file|
-          @options[:log_file] = file
-        end
+        opts.separator ''
+        opts.separator 'Location ID: Any postal code worldwide, lat,lon coordinates, or GPS via --gps'
+        opts.separator '  - US: 77511, 10001, 90210'
+        opts.separator '  - International: 75001 (Paris), SW1A1AA (London), etc.'
+        opts.separator '  - Coordinates: 48.8566,2.3522'
+        opts.separator '  - GPS: saytime.rb --gps -n 546054 (requires gpsd)'
+        opts.separator ''
+        opts.separator 'Examples:'
+        opts.separator '  saytime.rb -l 77511 -n 546054'
+        opts.separator '  saytime.rb -l 77511 -n 546054 -s 1'
+        opts.separator '  saytime.rb -l 77511 -n 546054 -u'
+        opts.separator ''
+        opts.separator "Configuration in #{SaytimeWeather::Paths.config_path}:"
+        opts.separator '  - Temperature_mode: F/C (default: F)'
+        opts.separator '  - process_condition: YES/NO (default: YES)'
+        opts.separator ''
+        opts.separator 'Time zone: the weather location\'s time zone is used; a TZ environment variable,'
+        opts.separator '  when set, overrides it (unset TZ in cron to announce location-local time).'
+        opts.separator ''
+        opts.separator 'Note: Free providers need no API key; WeatherAPI requires weatherapi_key when weather_provider = weatherapi.'
       end
-
-      parser.parse!
-
-      @options[:node_number] ||= ARGV[0] if ARGV[0]
     end
 
     def show_usage
-      puts "saytime.rb version #{SaytimeWeather::VERSION}\n\n"
-      puts "Usage: #{File.basename($PROGRAM_NAME)} [OPTIONS]\n\n"
-      puts "Options:"
-      puts "  -l, --location_id=ID    Location ID for weather (optional with --gps or location_source=gps)"
-      puts "  -n, --node_number=NUM   Node number for announcement (required)"
-      puts "  -s, --silent=NUM        Silent mode (default: 0)"
-      puts "                          0=play (scratch files removed after run)"
-      puts "                          1=save time+weather to /tmp/current-time.ulaw"
-      puts "                          2=save weather only to /tmp/current-time.ulaw"
-      puts "  -h, --help              Show this help message"
-      puts "  -u, --use_24hour        Use 24-hour clock (default: 12-hour)"
-      puts "  -v, --verbose           Enable verbose output (default: off)"
-      puts "      --dry-run            Don't actually play or save files (default: off)"
-      puts "  -d, --default-country CC Override default country for weather (us, ca, fr, de, uk, etc.)"
-      puts "  -c, --config FILE       Path to weather.ini for weather lookups"
-      puts "      --gps               Use GPS via gpsd (or set location_source = gps in weather.ini)"
-      puts "      --weather-subprocess Run weather.rb as subprocess (default: in-process)"
-      puts "  -t, --test              Log playback command instead of executing (default: off)"
-      puts "  -w, --weather           Enable weather announcements (default: on)"
-      puts "      --no-weather        Disable weather announcements"
-      puts "  -g, --greeting          Enable greeting messages (default: on)"
-      puts "      --no-greeting       Disable greeting messages"
-      puts "  -m, --method=METHOD     Use -m alone for playback, or pass localplay|playback (default: localplay)"
-      puts "      --sound-dir=DIR     Use custom sound directory"
-      puts "                          (default: #{SaytimeWeather::Paths.asterisk_sounds_en})"
-      puts "      --log=FILE          Log to specified file (default: none)"
-      puts "      --help              Show this help message and exit\n\n"
-      puts "Location ID: Any postal code worldwide, lat,lon coordinates, or GPS via --gps"
-      puts "  - US: 77511, 10001, 90210"
-      puts "  - International: 75001 (Paris), SW1A1AA (London), etc."
-      puts "  - Coordinates: 48.8566,2.3522"
-      puts "  - GPS: saytime.rb --gps -n 546054 (requires gpsd)\n\n"
-      puts "Examples:"
-      puts "  ruby saytime.rb -l 77511 -n 546054"
-      puts "  ruby saytime.rb -l 77511 -n 546054 -s 1"
-      puts "  ruby saytime.rb -l 77511 -n 546054 -u\n\n"
-      puts "Configuration in /etc/asterisk/local/weather.ini:"
-      puts "  - Temperature_mode: F/C (default: F)"
-      puts "  - process_condition: YES/NO (default: YES)\n\n"
-      puts "Note: Free providers need no API key; WeatherAPI requires weatherapi_key when weather_provider = weatherapi.\n"
+      puts option_parser.help
     end
 
     def validate_options
