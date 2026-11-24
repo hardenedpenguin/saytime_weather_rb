@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'ipaddr'
+require 'resolv'
 require 'socket'
 require 'time'
 
@@ -76,8 +78,10 @@ module SaytimeWeather
       min_mode = gps_config_int('gps_min_mode', 2)
       max_age = gps_config_int('gps_max_age_seconds', 300)
 
+      # One budget covers resolution, every connect attempt, and the reads.
       deadline = monotonic_now + timeout_sec
-      Socket.tcp(host, port, connect_timeout: timeout_sec) do |sock|
+      sock = connect_before(host, port, deadline)
+      begin
         sock.write("?WATCH={\"enable\":true,\"json\":true}\n")
         buffer = +''
         loop do
@@ -90,6 +94,8 @@ module SaytimeWeather
 
           return extract_fix(obj)
         end
+      ensure
+        sock.close unless sock.closed?
       end
       nil
     rescue => e
@@ -129,6 +135,52 @@ module SaytimeWeather
 
     def monotonic_now
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
+    # Open a TCP connection to gpsd, never past +deadline+ (monotonic seconds).
+    # Resolution and each address attempt get only the remaining budget, and no new
+    # attempt starts once it is spent. Raises the last error when nothing connects.
+    def connect_before(host, port, deadline)
+      last_error = nil
+      resolve_before(host, deadline).each do |ip|
+        remaining = deadline - monotonic_now
+        break if remaining <= 0
+
+        begin
+          return Socket.tcp(ip, port, connect_timeout: remaining)
+        rescue SystemCallError, SocketError => e
+          last_error = e
+        end
+      end
+      raise last_error || Errno::ETIMEDOUT.new("connect to #{host}:#{port}")
+    end
+
+    # IP literals skip resolution. Names use /etc/hosts, then DNS limited to the
+    # remaining budget (Resolv works on Ruby 2.7, unlike Socket.tcp resolv_timeout).
+    def resolve_before(host, deadline)
+      return [host] if ip_literal?(host)
+
+      addrs = Resolv::Hosts.new.getaddresses(host)
+      return addrs unless addrs.empty?
+
+      remaining = deadline - monotonic_now
+      raise Errno::ETIMEDOUT, "resolve #{host}" if remaining <= 0
+
+      Resolv::DNS.open do |dns|
+        dns.timeouts = remaining
+        addrs = dns.getresources(host, Resolv::DNS::Resource::IN::A).map { |r| r.address.to_s }
+        addrs += dns.getresources(host, Resolv::DNS::Resource::IN::AAAA).map { |r| r.address.to_s } if (deadline - monotonic_now).positive?
+      end
+      raise SocketError, "could not resolve #{host}" if addrs.empty?
+
+      addrs
+    end
+
+    def ip_literal?(host)
+      IPAddr.new(host)
+      true
+    rescue IPAddr::InvalidAddressError, ArgumentError
+      false
     end
 
     # Read one newline-terminated line, waiting at most until +deadline+ (monotonic seconds).

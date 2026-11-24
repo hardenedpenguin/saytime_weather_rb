@@ -45,7 +45,10 @@ class GeocodingConfigTest
   def test_geocode_cache_respects_country_override
     with_temp_config(default_country: 'us') do |ini, dir|
       prev_tmp = ENV['SAYTIME_TMP']
+      prev_cache = ENV['SAYTIME_CACHE_DIR']
       ENV['SAYTIME_TMP'] = dir
+      # Keep fixtures out of a real cache (/var/cache/saytime-weather-rb on a node).
+      ENV['SAYTIME_CACHE_DIR'] = File.join(dir, 'cache')
       begin
         write_geocode_cache(dir, 'us', '75001', *DALLAS)
         write_geocode_cache(dir, 'fr', '75001', *PARIS)
@@ -66,6 +69,11 @@ class GeocodingConfigTest
         else
           ENV.delete('SAYTIME_TMP')
         end
+        if prev_cache
+          ENV['SAYTIME_CACHE_DIR'] = prev_cache
+        else
+          ENV.delete('SAYTIME_CACHE_DIR')
+        end
       end
     end
   end
@@ -79,7 +87,10 @@ class GeocodingConfigTest
   def test_four_digit_postal_uses_non_us_country
     with_temp_config(default_country: 'us') do |ini, dir|
       prev_tmp = ENV['SAYTIME_TMP']
+      prev_cache = ENV['SAYTIME_CACHE_DIR']
       ENV['SAYTIME_TMP'] = dir
+      # Keep fixtures out of a real cache (/var/cache/saytime-weather-rb on a node).
+      ENV['SAYTIME_CACHE_DIR'] = File.join(dir, 'cache')
       begin
         us_script = SaytimeWeather::WeatherScript.new(options: { config_file: ini })
         assert_equal(nil, us_script.send(:geocode_country_hint, '2000'), '4-digit with ini us has no country hint')
@@ -102,6 +113,11 @@ class GeocodingConfigTest
           ENV['SAYTIME_TMP'] = prev_tmp
         else
           ENV.delete('SAYTIME_TMP')
+        end
+        if prev_cache
+          ENV['SAYTIME_CACHE_DIR'] = prev_cache
+        else
+          ENV.delete('SAYTIME_CACHE_DIR')
         end
       end
     end

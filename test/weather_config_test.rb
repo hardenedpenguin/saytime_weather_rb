@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'tmpdir'
 require 'saytime_weather/config_error'
 require 'saytime_weather/weather_config'
 require 'saytime_weather/weather_helpers'

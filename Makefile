@@ -1,6 +1,6 @@
 # Makefile for saytime-weather-rb
 
-.PHONY: build clean install package test test-unit
+.PHONY: build clean install package test test-unit test-standalone
 
 build:
 	@echo "No build step needed - Ruby scripts are interpreted"
@@ -31,6 +31,12 @@ test:
 
 test-unit:
 	ruby test/all.rb
+
+# Run each test file on its own so a missing require cannot hide behind load order.
+test-standalone:
+	@for f in test/*_test.rb test/saytime_regression_audit.rb; do \
+		ruby "$$f" >/dev/null || { echo "FAIL: $$f"; exit 1; }; \
+	done; echo "standalone tests: ok"
 
 .DEFAULT_GOAL := build
 

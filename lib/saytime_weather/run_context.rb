@@ -3,6 +3,7 @@
 require 'etc'
 require 'fileutils'
 require 'tmpdir'
+require_relative 'paths'
 
 module SaytimeWeather
   # Per-invocation scratch directory (avoids /tmp races and symlink attacks between runs).

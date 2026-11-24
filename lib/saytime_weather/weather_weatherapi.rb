@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'weather_optional_fields'
+require_relative 'weather_conditions'
 
 module SaytimeWeather
   module WeatherWeatherapi

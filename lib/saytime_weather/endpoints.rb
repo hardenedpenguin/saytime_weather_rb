@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 module SaytimeWeather
   module Endpoints
     module_function

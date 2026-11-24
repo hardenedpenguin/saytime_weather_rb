@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Ruby ${{ matrix.ruby }}
@@ -30,6 +33,9 @@ jobs:
 
       - name: Unit tests
         run: make test-unit
+
+      - name: Standalone test files
+        run: make test-standalone
 
   package:
     name: Build and lint .deb

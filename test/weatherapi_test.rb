@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'json'
 require 'saytime_weather/weather_geocoding'
 require 'saytime_weather/weather_airports'
 require 'saytime_weather/weather_units'

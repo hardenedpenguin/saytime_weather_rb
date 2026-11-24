@@ -178,6 +178,39 @@ assert!(buf == 'partial', 'keeps remainder buffered')
 a.close
 b.close
 
+# Connection setup shares the gps_timeout_seconds budget across all addresses.
+assert!(g.send(:ip_literal?, '127.0.0.1') && g.send(:ip_literal?, '::1'), 'IP literals detected')
+assert!(!g.send(:ip_literal?, 'gpsd.local'), 'host names are not IP literals')
+assert!(g.send(:resolve_before, 'localhost', monotonic + 2).any?, 'localhost resolves via /etc/hosts')
+
+g.define_singleton_method(:resolve_before) { |_h, _d| %w[10.255.255.1 10.255.255.2 10.255.255.3] }
+t0 = monotonic
+begin
+  g.send(:connect_before, 'unreachable.example', 2947, monotonic + 0.5)
+  raise 'unreachable gpsd should not connect'
+rescue SystemCallError, SocketError
+  nil
+end
+assert!(monotonic - t0 < 1.5, "three dead addresses share one budget (#{(monotonic - t0).round(2)}s)")
+g.singleton_class.send(:remove_method, :resolve_before)
+
+# End to end against a fake gpsd: connect, send WATCH, read a TPV fix.
+gpsd = TCPServer.new('127.0.0.1', 0)
+gpsd_thread = Thread.new do
+  c = gpsd.accept
+  c.gets
+  c.write("{\"class\":\"VERSION\"}\n")
+  c.write("{\"class\":\"TPV\",\"mode\":3,\"lat\":29.76,\"lon\":-95.37,\"time\":\"#{Time.now.utc.iso8601}\"}\n")
+  sleep 0.5
+  c.close
+end
+g.instance_variable_set(:@config, { 'gpsd_port' => gpsd.addr[1].to_s, 'gps_timeout_seconds' => '3' })
+fix = g.send(:read_gps_from_gpsd)
+assert!(fix && fix[:lat].round(2) == 29.76 && fix[:lon].round(2) == -95.37, "gpsd fix read (#{fix.inspect})")
+gpsd_thread.join(2)
+gpsd.close
+g.instance_variable_set(:@config, {})
+
 t0 = monotonic
 out = g.send(:read_command_output, ['sleep', '10'], 0.3)
 assert!(out.nil? && monotonic - t0 < 3, 'hung gpspipe is terminated at the deadline')

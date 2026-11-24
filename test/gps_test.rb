@@ -3,6 +3,7 @@
 
 $LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
 require 'time'
+require 'tmpdir'
 require 'saytime_weather/weather_geocoding'
 require 'saytime_weather/gps'
 require 'saytime_weather/cache'
@@ -57,11 +58,19 @@ assert(h.send(:valid_tpv?, tpv, 2, 300), 'valid TPV should pass')
 bad = tpv.merge('mode' => 1)
 assert(!h.send(:valid_tpv?, bad, 2, 300), 'mode below minimum should fail')
 
-cache_path = SaytimeWeather::Paths.gps_fix_cache_path
-File.unlink(cache_path) if File.exist?(cache_path)
-h.send(:write_gps_fix_cache, fix)
-cached = h.send(:read_gps_fix_cache)
-assert(cached && cached[:lat] == fix[:lat], 'GPS fix cache round trip')
-File.unlink(cache_path)
+# Use a throwaway cache so the test never touches a node's real GPS fix cache.
+Dir.mktmpdir do |cache_dir|
+  prev_cache = ENV['SAYTIME_CACHE_DIR']
+  ENV['SAYTIME_CACHE_DIR'] = cache_dir
+  begin
+    cache_path = SaytimeWeather::Paths.gps_fix_cache_path
+    assert(cache_path.start_with?(cache_dir), 'GPS fix cache isolated to test dir')
+    h.send(:write_gps_fix_cache, fix)
+    cached = h.send(:read_gps_fix_cache)
+    assert(cached && cached[:lat] == fix[:lat], 'GPS fix cache round trip')
+  ensure
+    prev_cache.nil? ? ENV.delete('SAYTIME_CACHE_DIR') : ENV['SAYTIME_CACHE_DIR'] = prev_cache
+  end
+end
 
 puts 'gps_test: ok'

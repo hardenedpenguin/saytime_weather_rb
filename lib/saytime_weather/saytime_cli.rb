@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require_relative 'version'
+require_relative 'paths'
 
 module SaytimeWeather
   module SaytimeCli
